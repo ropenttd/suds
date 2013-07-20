@@ -1,8 +1,17 @@
 ###
-# Copyright (c) 2013, Taede Werkhoven
-# All rights reserved.
-# blub
+# This file is part of Soap.
 #
+# Soap is free software; you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, version 2.
+#
+# Soap is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.
+#
+# See the GNU General Public License for more details. You should have received
+# a copy of the GNU General Public License along with Soap. If not, see
+# <http://www.gnu.org/licenses/>.
 ###
 
 import supybot.utils as utils
@@ -86,12 +95,12 @@ class Soap(callbacks.Plugin):
                     welcome_response)
                 if protocol_response is None or welcome_response is None:
                     failed = True
-                    irc.reply('no response from server')
+                    self.log.info('no response from server')
             except socket.error, v:
                 failed = True
                 error1 = v[0]
                 error2 = v[1]
-                irc.error('error connecting: %s - %s' % (error1, error2))
+                self.log.info('error connecting: %s - %s' % (error1, error2))
             
             if failed:
                 irc.error('unable to connect to %s:%s. ',
