@@ -21,6 +21,7 @@ import supybot.ircmsgs as ircmsgs
 import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 
+import threading
 import socket
 from libottdadmin2.client import (AdminClient, AdminRcon, ServerRcon,
     ServerRconEnd)
@@ -35,6 +36,7 @@ class Soap(callbacks.Plugin):
     def __init__(self, irc):
         self.__parent = super(Soap, self)
         self.__parent.__init__(irc)
+        self.e = threading.Event()
         self.connection = AdminClient()
         
         # for testing purposes untill config.py is active
@@ -46,38 +48,26 @@ class Soap(callbacks.Plugin):
         self.channel = '#turbulent'
     
     # incomplete def
-    def _apreceive(self):
-        cont = True
-        while cont:
-            packets = self.connection.poll()
-            if packets is None or packets is False:
-                #print("Connection lost!")
-                break
-            cont = len(packets) > 0
-            for packet, data in packets:
-                if packet == ServerRcon:
-                    pass
-                    #print(">>> %s" % data['result'])
-                elif packet == ServerRconEnd:
-                    #print("<<< END OF COMMAND >>>")
-                    cont = False
-                    break
-                else:
-                    pass
+    def _pollForData(self, irc):
+        index = 1
+        self.log.info('polling')
+        self.log.info('value of isSet: %s' % self.e.isSet())
+        while not self.e.isSet():
+            index += 1
+            self.log.info('poll')
     
     def apconnect(self, irc, msg, args):
         """
         connect to AdminPort of OpenTTD server
         """
         if self.connection.is_connected:
-            irc.error('already connected to server %s. ',
-                'If you wish to reconnect, use !apdisconnect first.',
-                self.connection.host)
+            msg = ('already connected to server %s. If you wish to reconnect, use !apdisconnect first.' % self.connection.host)
+            irc.error(msg)
         else:
             msg = 'Connecting to %s' % self.servername
-            irc.queueMsg(ircmsgs.privmsg(self.channel, msg))
-            irc.noReply()
+            irc.reply(msg, prefixNick=False)
             
+            self.e.clear()
             self.connection = AdminClient()
             self.connection.configure(password = self.password,
                 host = self.server, port = self.port)
@@ -100,17 +90,18 @@ class Soap(callbacks.Plugin):
                 failed = True
                 error1 = v[0]
                 error2 = v[1]
-                self.log.info('error connecting: %s - %s' % (error1, error2))
+                errormsg = 'error connecting: %s - %s' % (error1, error2)
+                self.log.info(errormsg)
             
             if failed:
-                irc.error('unable to connect to %s:%s. ',
-                    'Check you have entered the right details and ',
-                    'that the server is up',
-                    (self.connection.host, self.connection.port))
+                msg = 'unable to connect to %s:%s. Check you have entered the right details and that the server is up' % (self.connection.host, self.connection.port)
+                self.log.info(msg)
             else:
                 msg = 'Connected to %s' % self.connection.host
-                irc.queueMsg(ircmsgs.privmsg(self.channel, msg))
-
+                irc.reply(msg, prefixNick=False)
+                t = threading.Thread(target=self._pollForData, kwargs={'irc':irc})
+                t.start()
+                
     apconnect = wrap(apconnect, [('checkCapability', 'trusted')])
     
     def apdisconnect(self, irc, msg, args):
@@ -120,10 +111,11 @@ class Soap(callbacks.Plugin):
         
         if self.connection.is_connected:
             msg = 'Disconnecting from OpenTTD'
-            irc.queueMsg(ircmsgs.privmsg(self.channel, msg))
+            irc.reply(msg, prefixNick=False)
+            self.e.set()
             self.connection.disconnect()
         else:
-            irc.error('Not connected!')
+            irc.error('Not connected!', prefixNick=False)
     apdisconnect = wrap(apdisconnect, [('checkCapability', 'trusted')])
 
 Class = Soap

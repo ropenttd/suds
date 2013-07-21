@@ -41,10 +41,16 @@ conf.registerGlobalValue(conf.supybot.plugins.Soap, 'host',
     registry.String('127.0.0.1', """ The hostname or IP-adress of the OpenTTD
     server you wish the bot to connect to """))
 conf.registerGlobalValue(conf.supybot.plugins.Soap, 'port',
-    registry.Int(3977, """ The port of the server's adminport """))
+    registry.Integer(3977, """ The port of the server's adminport """))
 conf.registerGlobalValue(conf.supybot.plugins.Soap, 'password',
     registry.String('password', """ The password as set in openttd.cfg """))
 conf.registerGlobalValue(conf.supybot.plugins.Soap, 'timeout',
-    registry.Int(0.4, """ Timeout in seconds """))
+    registry.Float(0.4, """ Timeout in seconds """))
+    
+# Miscellanious settings
+# conf.registerGlobalValue(conf.supybot.plugins.Soap, 'allowPlayAsPlayer',
+    # registry.Boolean(True, """ True means players can play with Player as their
+    # name. False will get them moved to spectators any time they try to join a
+    # company """))
     
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
