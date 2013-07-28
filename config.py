@@ -32,25 +32,27 @@ Soap = conf.registerPlugin('Soap')
 #     registry.Boolean(False, """Help for someConfigVariableName."""))
 
 # irc-side configuration settings
-conf.registerGlobalValue(conf.supybot.plugins.Soap, 'channel',
-    registry.String('', """ The channel you wish to use for OpenTTD
+conf.registerGlobalValue(Soap, 'channel',
+    registry.String('#turbulent', """ The channel you wish to use for OpenTTD
     communication """))
 
 # OpenTTD server configuration
-conf.registerGlobalValue(conf.supybot.plugins.Soap, 'host',
+conf.registerGlobalValue(Soap, 'host',
     registry.String('127.0.0.1', """ The hostname or IP-adress of the OpenTTD
     server you wish the bot to connect to """))
-conf.registerGlobalValue(conf.supybot.plugins.Soap, 'port',
+conf.registerGlobalValue(Soap, 'port',
     registry.Integer(3977, """ The port of the server's adminport """))
-conf.registerGlobalValue(conf.supybot.plugins.Soap, 'password',
+conf.registerGlobalValue(Soap, 'password',
     registry.String('password', """ The password as set in openttd.cfg """))
-conf.registerGlobalValue(conf.supybot.plugins.Soap, 'timeout',
+conf.registerGlobalValue(Soap, 'timeout',
     registry.Float(0.4, """ Timeout in seconds """))
-    
+
 # Miscellanious settings
-# conf.registerGlobalValue(conf.supybot.plugins.Soap, 'allowPlayAsPlayer',
+conf.registerGlobalValue(Soap, 'autoconnect',
+    registry.Boolean(True, """ Connect automatically? """))
+# conf.registerGlobalValue(Soap, 'allowPlayAsPlayer',
     # registry.Boolean(True, """ True means players can play with Player as their
     # name. False will get them moved to spectators any time they try to join a
     # company """))
-    
+
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:

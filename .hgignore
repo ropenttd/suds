@@ -1,3 +1,1 @@
-syntax: glob
-
-*.pyc
+\.pyc$
