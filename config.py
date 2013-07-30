@@ -50,9 +50,13 @@ conf.registerGlobalValue(Soap, 'timeout',
 # Miscellanious settings
 conf.registerGlobalValue(Soap, 'autoconnect',
     registry.Boolean(True, """ Connect automatically? """))
-# conf.registerGlobalValue(Soap, 'allowPlayAsPlayer',
-    # registry.Boolean(True, """ True means players can play with Player as their
-    # name. False will get them moved to spectators any time they try to join a
-    # company """))
+conf.registerGlobalValue(Soap, 'allowOps',
+    registry.Boolean(True, """ Setting this to True will allow any op as well
+    as trusted user in the channel to execute soap commands . Setting this to
+    false only allows trusted users to do so """ ))
+conf.registerGlobalValue(Soap, 'playAsPlayer',
+    registry.Boolean(True, """ True means players can play with Player as their
+    name. False will get them moved to spectators any time they try to join a
+    company """))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:

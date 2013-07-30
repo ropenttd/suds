@@ -43,8 +43,10 @@ class SoapClient(AdminClient):
         self._userdb = dict()
 
         self._channel = None
+        self._allowOps = False
+        self._playAsPlayer = True
         self._serverName = 'default'
-        self._serverVersion = 'r25000'
+        self._serverVersion = 'default'
 
 
     @property
@@ -54,6 +56,22 @@ class SoapClient(AdminClient):
     @channel.setter
     def channel(self, value):
         self._channel = value
+
+    @property
+    def allowOps(self):
+        return self._allowOps
+
+    @channel.setter
+    def allowOps(self, value):
+        self._allowOps = value
+
+    @property
+    def playAsPlayer(self):
+        return self._playAsPlayer
+
+    @channel.setter
+    def playAsPlayer(self, value):
+        self._playAsPlayer = value
 
     @property
     def serverName(self):
@@ -139,6 +157,8 @@ class Soap(callbacks.Plugin):
             port = self.registryValue('port'),
             name = 'Soap')
         self.connection.channel = self.registryValue('channel')
+        self.connection.allowOps = self.registryValue('allowOps')
+        self.connection.playAsPlayer = self.registryValue('playAsPlayer')
         self.connection.settimeout(self.registryValue('timeout'))
 
     def _initializeConnection(self, irc):
@@ -153,9 +173,7 @@ class Soap(callbacks.Plugin):
         try:
             protocol_response = self.connection.recv_packet()
             self.log.info('Protocol: %s', protocol_response)
-            welcome_response = self.connection.recv_packet()
-            self.log.info('Welcome: %s', welcome_response)
-            if protocol_response is None or welcome_response is None:
+            if protocol_response is None:
                 failed = True
                 self.log.info('no response from server')
         except socket.error, v:
@@ -164,11 +182,10 @@ class Soap(callbacks.Plugin):
         if failed:
             irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Unable to connect'))
         else:
-            # self._populateUserDb()
+            # request info on all clients, so userdb gets populated
+            self.connection.send_packet(AdminPoll, pollType = 0x01,
+                extra = 0xFFFFFFFF)
             irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Connected'))
-
-    def _populateUserDb(self):
-        self.connection.send_packet(AdminPoll, pollType = 0x01, extra = 0xFFFFFFFF)
 
     def _startReceiveThread(self, irc):
         t = threading.Thread(target=self._pollForData, kwargs={'irc':irc})
@@ -187,16 +204,33 @@ class Soap(callbacks.Plugin):
         self.connection.send_packet(AdminUpdateFrequency, updateType = 8,
             updateFreq = 0x40)
 
+    def _checkPermission(self, irc, msg, allowOps):
+        capable = ircdb.checkCapability(msg.prefix, 'trusted')
+        opped = msg.nick in irc.state.channels[self.connection.channel].ops
+        if allowOps:
+            if (opped or capable):
+                return True
+            else:
+                return False
+        else:
+            if capable:
+                return True
+            else:
+                return False
+
     def apconnect(self, irc, msg, args):
         """
         connect to AdminPort of OpenTTD server
         """
-        if self.connection.is_connected:
-            irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'already connected'))
-        else:
-            self._initializeConnection(irc)
+        # irc.reply('%s - %s' % (msg, args))
+        if self._checkPermission(irc, msg, self.connection.allowOps):
             if self.connection.is_connected:
-                self._startReceiveThread(irc)
+                irc.queueMsg(ircmsgs.privmsg(self.connection.channel,
+                    'already connected'))
+            else:
+                self._initializeConnection(irc)
+                if self.connection.is_connected:
+                    self._startReceiveThread(irc)
     apconnect = wrap(apconnect)
 
     def apdisconnect(self, irc, msg, args):
@@ -204,11 +238,12 @@ class Soap(callbacks.Plugin):
         disconnect from server
         """
 
-        if self.connection.is_connected:
-            irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Disconnecting'))
-            self.e.set()
-        else:
-            irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Not connected'))
+        if self._checkPermission(irc, msg, self.connection.allowOps):
+            if self.connection.is_connected:
+                irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Disconnecting'))
+                self.e.set()
+            else:
+                irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Not connected'))
     apdisconnect = wrap(apdisconnect)
 
 Class = Soap
