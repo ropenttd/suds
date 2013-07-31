@@ -26,7 +26,9 @@ import supybot.plugins as plugins
 import threading
 import time
 import socket
-from libottdadmin2.client import *
+from libottdadmin2.client import AdminClient
+from libottdadmin2.packets import *
+from libottdadmin2.enums import UpdateType, UpdateFrequency
 
 
 class SoapClient(AdminClient):
@@ -178,7 +180,7 @@ class Soap(callbacks.Plugin):
                 self.log.info('no response from server')
         except socket.error, v:
             failed = True
-            self.log.info('error connecting: %s - %s' % (v[0], v[1]))
+            self.log.info('connection error: %s' % v)
         if failed:
             irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Unable to connect'))
         else:
@@ -191,18 +193,11 @@ class Soap(callbacks.Plugin):
         t = threading.Thread(target=self._pollForData, kwargs={'irc':irc})
         t.daemon = True
         t.start()
-        # Change update frequency for Admin_ClientInfo to automatic
-        self.connection.send_packet(AdminUpdateFrequency, updateType = 1,
-            updateFreq = 0x40)
-        # Change update frequency for Admin_CompanyInfo to automatic
-        self.connection.send_packet(AdminUpdateFrequency, updateType = 2,
-            updateFreq = 0x40)
-        # Change update frequency for Admin_Chat to automatic
-        self.connection.send_packet(AdminUpdateFrequency, updateType = 5,
-            updateFreq = 0x40)
-        # Change update frequency for Admin_CommandLogging to automatic
-        self.connection.send_packet(AdminUpdateFrequency, updateType = 8,
-            updateFreq = 0x40)
+        autoUpdate = [UpdateType.CLIENT_INFO, UpdateType.COMPANY_INFO,
+            UpdateType.CHAT, UpdateType.LOGGING]
+        for item in autoUpdate:
+            self.connection.send_packet(AdminUpdateFrequency,
+                updateType = item, updateFreq = UpdateFrequency.AUTOMATIC)
 
     def _checkPermission(self, irc, msg, allowOps):
         capable = ircdb.checkCapability(msg.prefix, 'trusted')
