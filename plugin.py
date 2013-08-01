@@ -26,89 +26,10 @@ import supybot.plugins as plugins
 import threading
 import time
 import socket
-from libottdadmin2.client import AdminClient
-from libottdadmin2.packets import *
+
+from SoapClient import SoapClient
 from libottdadmin2.enums import UpdateType, UpdateFrequency
-
-
-class SoapClient(AdminClient):
-    """
-    Connection object to allow storing of additional info per server, like a
-    user <-> clientId database
-    """
-
-
-    def __init__(self):
-        super(SoapClient, self).__init__()
-
-        # key=clientid, value=username
-        self._userdb = dict()
-
-        self._channel = None
-        self._allowOps = False
-        self._playAsPlayer = True
-        self._serverName = 'default'
-        self._serverVersion = 'default'
-
-
-    @property
-    def channel(self):
-        return self._channel
-
-    @channel.setter
-    def channel(self, value):
-        self._channel = value
-
-    @property
-    def allowOps(self):
-        return self._allowOps
-
-    @channel.setter
-    def allowOps(self, value):
-        self._allowOps = value
-
-    @property
-    def playAsPlayer(self):
-        return self._playAsPlayer
-
-    @channel.setter
-    def playAsPlayer(self, value):
-        self._playAsPlayer = value
-
-    @property
-    def serverName(self):
-        return self._serverName
-
-    @serverName.setter
-    def serverName(self, value):
-        self._serverName = value
-
-    @property
-    def serverVersion(self):
-        return self._serverVersion
-
-    @serverVersion.setter
-    def serverVersion(self, value):
-        self.serverVersion = value
-
-
-    #userdb operations
-    def userdbClear(self):
-        self._userdb.clear()
-
-    def userdbSet(self, clientId, username):
-        self._userdb[clientId] = username
-
-    def userdbGet(self, clientId):
-        return self._userdb.get(clientId)
-
-    def userdbList(self):
-        return self._userdb.keys()
-
-    def userdbRemove(self, clientID):
-        del self._userdb[clientId]
-
-
+from libottdadmin2.packets import *
 
 
 class Soap(callbacks.Plugin):
@@ -128,6 +49,8 @@ class Soap(callbacks.Plugin):
             self.e.set()
         except:
             pass
+        # make sure the listeng thread is closed
+        time.sleep(1.0)
         self.__parent.die()
 
     def _pollForData(self, irc):
@@ -161,7 +84,6 @@ class Soap(callbacks.Plugin):
         self.connection.channel = self.registryValue('channel')
         self.connection.allowOps = self.registryValue('allowOps')
         self.connection.playAsPlayer = self.registryValue('playAsPlayer')
-        self.connection.settimeout(self.registryValue('timeout'))
 
     def _initializeConnection(self, irc):
         irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Connecting'))

@@ -23,14 +23,14 @@ Installing libottdadmin2:
 
  The first one is the easiest one, run 'python2 setup.py install' from the
  libottdadmin2 dir. This will install the lib systemwide and make it available
- to any other python programs that may need it. You may need root access
+ to any other python programs that may need it. You may need sudo access
  depending on the system setup though.
 
  The other way is to copy the libottdadmin2 dir into the Soap plugin directory.
  Copied right client.py should be found at this path:
  PathToPlugins/Soap/libottdadmin2/client.py
  This will give the same functionality, but only for the Soap plugin. On the
- upside, no root access required.
+ upside, no sudo access required.
 
 Commands:
  apconnect       - connects to the preconfigured openttd server
