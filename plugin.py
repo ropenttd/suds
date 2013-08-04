@@ -27,13 +27,13 @@ import threading
 import time
 import socket
 
-from libottdadmin2.trackingclient import TrackingClient
+from libottdadmin2.trackingclient import TrackingAdminClient as TAC
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
 
 
-class SoapClient(TrackingClient):
-    _settable_args = AdminConnection._settable_args + ['channel', 'allowOps', 'playAsPlayer', ]
+class SoapClient(TAC):
+    _settable_args = TAC._settable_args + ['channel', 'allowOps', 'playAsPlayer']
     _channel = None
     _allowOps = False
     _playAsPlayer = True
