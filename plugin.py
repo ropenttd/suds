@@ -27,9 +27,40 @@ import threading
 import time
 import socket
 
-from SoapClient import SoapClient
-from libottdadmin2.enums import UpdateType, UpdateFrequency
+from libottdadmin2.trackingclient import TrackingClient
+from libottdadmin2.enums import *
 from libottdadmin2.packets import *
+
+
+class SoapClient(TrackingClient):
+    _settable_args = AdminConnection._settable_args + ['channel', 'allowOps', 'playAsPlayer', ]
+    _channel = None
+    _allowOps = False
+    _playAsPlayer = True
+    
+    @property
+    def channel(self):
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
+
+    @property
+    def allowOps(self):
+        return self._allowOps
+
+    @allowOps.setter
+    def allowOps(self, value):
+        self._allowOps = value
+
+    @property
+    def playAsPlayer(self):
+        return self._playAsPlayer
+
+    @playAsPlayer.setter
+    def playAsPlayer(self, value):
+        self._playAsPlayer = value
 
 
 class Soap(callbacks.Plugin):
@@ -116,21 +147,18 @@ class Soap(callbacks.Plugin):
         t.daemon = True
         t.start()
         autoUpdate = [UpdateType.CLIENT_INFO, UpdateType.COMPANY_INFO,
-            UpdateType.CHAT, UpdateType.LOGGING]
+            UpdateType.CHAT, UpdateType.LOGGING, UpdateType.CONSOLE]
         for item in autoUpdate:
             self.connection.send_packet(AdminUpdateFrequency,
                 updateType = item, updateFreq = UpdateFrequency.AUTOMATIC)
 
     def _checkPermission(self, irc, msg, allowOps):
         capable = ircdb.checkCapability(msg.prefix, 'trusted')
-        opped = msg.nick in irc.state.channels[self.connection.channel].ops
-        if allowOps:
-            if (opped or capable):
-                return True
-            else:
-                return False
+        if capable:
+            return True
         else:
-            if capable:
+            opped = msg.nick in irc.state.channels[self.connection.channel].ops
+            if opped and allowOps:
                 return True
             else:
                 return False
