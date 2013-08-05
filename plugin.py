@@ -30,6 +30,7 @@ import socket
 from libottdadmin2.trackingclient import TrackingAdminClient as TAC
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
+from libottdadmin2.event import Event
 
 
 class SoapClient(TAC):
@@ -37,7 +38,7 @@ class SoapClient(TAC):
     _channel = None
     _allowOps = False
     _playAsPlayer = True
-    
+
     @property
     def channel(self):
         return self._channel
@@ -65,7 +66,7 @@ class SoapClient(TAC):
 
 class Soap(callbacks.Plugin):
     """
-    This plugin allows supybot to interface to OpenTTD via its built-in
+    This plug-in allows supybot to interface to OpenTTD via its built-in
     adminport protocol
     """
 
@@ -80,19 +81,17 @@ class Soap(callbacks.Plugin):
             self.e.set()
         except:
             pass
-        # make sure the listeng thread is closed
-        time.sleep(1.0)
+        # make sure the listening thread is closed
+        time.sleep(self.connection.timeout)
         self.__parent.die()
 
-    def _pollForData(self, irc):
-        index = 1
-        self.log.info('polling')
+    def _pollForData(self):
+        self.log.info('start polling')
         pollcount = 0
         while not self.e.isSet():
             pollcount += 1
             try:
                 packets = self.connection.poll()
-                # self.log.info('polling %s', pollcount)
                 if packets is None or packets is False:
                     break
                 for packet, data in packets:
@@ -102,7 +101,6 @@ class Soap(callbacks.Plugin):
 
 
         self.log.info('end polling')
-        irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Connection terminated'))
         self.connection.disconnect()
 
     def _createSoapClient(self):
@@ -111,71 +109,63 @@ class Soap(callbacks.Plugin):
             password = self.registryValue('password'),
             host = self.registryValue('host'),
             port = self.registryValue('port'),
+            channel = self.registryValue('channel'),
+            allowOps = self.registryValue('allowOps'),
+            playAsPlayer = self.registryValue('playAsPlayer'),
             name = 'Soap')
-        self.connection.channel = self.registryValue('channel')
-        self.connection.allowOps = self.registryValue('allowOps')
-        self.connection.playAsPlayer = self.registryValue('playAsPlayer')
 
-    def _initializeConnection(self, irc):
-        irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Connecting'))
-
+    def _initializeConnection(self):
         self.e.clear()
         self._createSoapClient()
         self.connection.connect()
-        failed = False
         protocol_response = None
-        welcome_response = None
         try:
             protocol_response = self.connection.recv_packet()
             self.log.info('Protocol: %s', protocol_response)
             if protocol_response is None:
-                failed = True
                 self.log.info('no response from server')
+                return False
         except socket.error, v:
-            failed = True
             self.log.info('connection error: %s' % v)
-        if failed:
-            irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Unable to connect'))
+            return False
         else:
-            # request info on all clients, so userdb gets populated
-            self.connection.send_packet(AdminPoll, pollType = 0x01,
-                extra = 0xFFFFFFFF)
-            irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Connected'))
+            return True
 
-    def _startReceiveThread(self, irc):
-        t = threading.Thread(target=self._pollForData, kwargs={'irc':irc})
+    def _startReceiveThread(self):
+        t = threading.Thread(target=self._pollForData)
         t.daemon = True
         t.start()
-        autoUpdate = [UpdateType.CLIENT_INFO, UpdateType.COMPANY_INFO,
-            UpdateType.CHAT, UpdateType.LOGGING, UpdateType.CONSOLE]
-        for item in autoUpdate:
-            self.connection.send_packet(AdminUpdateFrequency,
-                updateType = item, updateFreq = UpdateFrequency.AUTOMATIC)
 
-    def _checkPermission(self, irc, msg, allowOps):
+    def _checkPermission(self, irc, msg, channel, allowOps):
         capable = ircdb.checkCapability(msg.prefix, 'trusted')
         if capable:
             return True
         else:
-            opped = msg.nick in irc.state.channels[self.connection.channel].ops
+            opped = msg.nick in irc.state.channels[channel].ops
             if opped and allowOps:
                 return True
             else:
                 return False
 
+    def _msgChannel(self, irc, channel, msg):
+        if channel in irc.state.channels:
+            irc.queueMsg(ircmsgs.privmsg(channel, msg))
+
     def apconnect(self, irc, msg, args):
         """
         connect to AdminPort of OpenTTD server
         """
-        # irc.reply('%s - %s' % (msg, args))
-        if self._checkPermission(irc, msg, self.connection.allowOps):
+        if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
-                irc.queueMsg(ircmsgs.privmsg(self.connection.channel,
-                    'already connected'))
+                self._msgChannel(irc, self.connection.channel, 'Already connected!!')
             else:
-                self._initializeConnection(irc)
-                if self.connection.is_connected:
-                    self._startReceiveThread(irc)
+                self._msgChannel(irc, self.connection.channel, 'Connecting')
+                success = self._initializeConnection()
+                if success:
+                    self._startReceiveThread()
+                    self._msgChannel(irc, self.connection.channel, 'Connected')
+                else:
+                    self._msgChannel(irc, self.connection.channel, 'Connection Failed')
     apconnect = wrap(apconnect)
 
     def apdisconnect(self, irc, msg, args):
@@ -183,12 +173,15 @@ class Soap(callbacks.Plugin):
         disconnect from server
         """
 
-        if self._checkPermission(irc, msg, self.connection.allowOps):
+        if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
-                irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Disconnecting'))
+                self._msgChannel(irc, self.connection.channel, 'Disconnecting')
                 self.e.set()
+                time.sleep(self.connection.timeout)
+                if not self.connection.connected():
+                    self._msgChannel(irc, self.connection.channel, 'Disconnected')
             else:
-                irc.queueMsg(ircmsgs.privmsg(self.connection.channel, 'Not connected'))
+                self._msgChannel(irc, self.connection.channel, 'Not connected!!')
     apdisconnect = wrap(apdisconnect)
 
 Class = Soap
