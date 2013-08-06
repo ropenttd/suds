@@ -154,7 +154,7 @@ class Soap(callbacks.Plugin):
         connect to AdminPort of OpenTTD server
         """
         
-        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+        if irc.isChannel(msg.args[0]) and not msg.args[0] == self.connection.channel:
             return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
@@ -174,7 +174,7 @@ class Soap(callbacks.Plugin):
         disconnect from server
         """
 
-        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+        if irc.isChannel(msg.args[0]) and not msg.args[0] == self.connection.channel:
             return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
@@ -192,7 +192,7 @@ class Soap(callbacks.Plugin):
         sends a rcon command to openttd
         """
         
-        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+        if irc.isChannel(msg.args[0]) and not msg.args[0] == self.connection.channel:
             return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             
