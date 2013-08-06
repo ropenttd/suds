@@ -28,6 +28,7 @@ import time
 import socket
 
 from libottdadmin2.trackingclient import TrackingAdminClient as TAC
+from libottdadmin2.constants import *
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
 from libottdadmin2.event import Event
@@ -121,7 +122,7 @@ class Soap(callbacks.Plugin):
         protocol_response = None
         try:
             protocol_response = self.connection.recv_packet()
-            self.log.info('Protocol: %s', protocol_response)
+            self.log.debug('Protocol: %s', protocol_response)
             if protocol_response is None:
                 self.log.info('no response from server')
                 return False
@@ -147,43 +148,66 @@ class Soap(callbacks.Plugin):
             else:
                 return False
 
-    def _msgChannel(self, irc, channel, msg):
-        if channel in irc.state.channels:
-            irc.queueMsg(ircmsgs.privmsg(channel, msg))
-
     def apconnect(self, irc, msg, args):
-        """
+        """ no arguments
+        
         connect to AdminPort of OpenTTD server
         """
+        
+        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+            return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
-                self._msgChannel(irc, self.connection.channel, 'Already connected!!')
+                irc.reply('Already connected!!', prefixNick = False)
             else:
-                self._msgChannel(irc, self.connection.channel, 'Connecting')
                 success = self._initializeConnection()
                 if success:
                     self._startReceiveThread()
-                    self._msgChannel(irc, self.connection.channel, 'Connected')
+                    irc.reply('Connected', prefixNick = False)
                 else:
-                    self._msgChannel(irc, self.connection.channel, 'Connection Failed')
+                    irc.reply('Connection failed', prefixNick = False)
     apconnect = wrap(apconnect)
 
     def apdisconnect(self, irc, msg, args):
-        """
+        """ no arguments
+        
         disconnect from server
         """
 
+        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+            return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
-                self._msgChannel(irc, self.connection.channel, 'Disconnecting')
                 self.e.set()
                 time.sleep(self.connection.timeout)
                 if not self.connection.connected():
-                    self._msgChannel(irc, self.connection.channel, 'Disconnected')
+                    irc.reply('Disconnected', prefixNick = False)
             else:
-                self._msgChannel(irc, self.connection.channel, 'Not connected!!')
+                irc.reply('Not connected!!', prefixNick = False)
     apdisconnect = wrap(apdisconnect)
-
+    
+    def rcon(self, irc, msg, args, command):
+        """ <rcon command>
+        
+        sends a rcon command to openttd
+        """
+        
+        if isChannel(msg.arg[0]) and not msg.arg[0] == self.connection.channel:
+            return
+        if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
+            
+            if not self.connection.is_connected:
+                irc.reply('Not connected!!', prefixNick = False)
+                return
+            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
+                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
+                irc.reply(message, prefixNick = False)
+                return
+            self.connection.send_packet(AdminRcon, command = command)
+        else:
+                irc.reply('Not connected!!', prefixNick = False)
+    rcon = wrap(rcon, ['text'])
+                
 Class = Soap
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:
