@@ -34,8 +34,9 @@ from libottdadmin2.packets import *
 
 
 class SoapClient(TAC):
-    _settable_args = TAC._settable_args + ['channel', 'allowOps', 'playAsPlayer']
+    _settable_args = TAC._settable_args + ['channel', 'autoConnect', 'allowOps', 'playAsPlayer']
     _channel = None
+    _autoConnect = False
     _allowOps = False
     _playAsPlayer = True
 
@@ -46,6 +47,14 @@ class SoapClient(TAC):
     @channel.setter
     def channel(self, value):
         self._channel = value
+
+    @property
+    def autoConnect(self):
+        return self._autoConnect
+
+    @autoConnect.setter
+    def autoConnect(self, value):
+        self._autoConnect = value
 
     @property
     def allowOps(self):
@@ -63,13 +72,6 @@ class SoapClient(TAC):
     def playAsPlayer(self, value):
         self._playAsPlayer = value
 
-def handles_packet(*items):
-    packets = [x if isinstance(x, (int, long)) else x.packetID for x in items]
-    def __inner(func):
-        func.handles_packet = packets
-        return func
-    return __inner
-
 class Soap(callbacks.Plugin):
     """
     This plug-in allows supybot to interface to OpenTTD via its built-in
@@ -82,12 +84,29 @@ class Soap(callbacks.Plugin):
         self.e = threading.Event()
         self.irc = irc
         self._createSoapClient(irc)
-        if self.connection.channel in irc.state.channels:
+        if self.connection.channel in irc.state.channels and self.connection.autoConnect:
             success = self._initializeConnection(irc)
             if success:
                 self._startReceiveThread()
-                text = 'connected' # to %s' % self.connection.serverinfo.name
+                while self.connection.serverinfo.name == None:
+                    pass
+                text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
                 self._msgChannel(irc, self.connection.channel, text)
+
+    def doJoin(self, irc, msg):
+        if (msg.nick == irc.nick
+            and msg.args[0] == self.connection.channel
+            and self.connection.autoConnect
+            and not self.connection.is_connected):
+            
+            self.log.info('passed last check')
+            success = self._initializeConnection(irc)
+            if success:
+                self._startReceiveThread()
+                while self.connection.serverinfo.name == None:
+                    pass
+                text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
+                irc.reply(text, prefixNick = False)
 
     def _rcvAdminChat(self, action, destType, clientID, message, data):
         self.log.info('called rcvAdminChat')
@@ -146,6 +165,7 @@ class Soap(callbacks.Plugin):
             port        = self.registryValue('port'),
             timeout     = float(0.5),
             channel     = self.registryValue('channel'),
+            autoConnect = self.registryValue('autoConnect'),
             allowOps    = self.registryValue('allowOps'),
             playAsPlayer = self.registryValue('playAsPlayer'),
             name        = '%s-Soap' % irc.nick)
@@ -214,7 +234,7 @@ class Soap(callbacks.Plugin):
             if self.connection.is_connected:
                 self.e.set()
                 time.sleep(self.connection.timeout)
-                if not self.connection.connected():
+                if not self.connection.is_connected:
                     irc.reply('Disconnected', prefixNick = False)
             else:
                 irc.reply('Not connected!!', prefixNick = False)
@@ -247,12 +267,11 @@ class Soap(callbacks.Plugin):
         if not irc.isChannel(channel):
             return
         actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, channel)
-        # irc.reply(text[:1])
         if actionChar in text[:1]:
             return
         if channel == self.connection.channel:
-            message = '<%s> %s' % (msg.nick, text)
-            self.connection.send_packet(AdminChat, action = 3, destType = 0, clientID = 1, message = message)
+            message = 'IRC <%s> %s' % (msg.nick, text)
+            self.connection.send_packet(AdminChat, action = 3, destType = 0, clientID = 0, message = message)
         
 Class = Soap
 

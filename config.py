@@ -48,7 +48,7 @@ conf.registerGlobalValue(Soap, 'timeout',
     registry.Float(0.4, """ Timeout in seconds """))
 
 # Miscellanious settings
-conf.registerGlobalValue(Soap, 'autoconnect',
+conf.registerGlobalValue(Soap, 'autoConnect',
     registry.Boolean(True, """ Connect automatically? """))
 conf.registerGlobalValue(Soap, 'allowOps',
     registry.Boolean(True, """ Setting this to True will allow any op as well
