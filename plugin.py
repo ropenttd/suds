@@ -31,7 +31,6 @@ from libottdadmin2.trackingclient import TrackingAdminClient as TAC
 from libottdadmin2.constants import *
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
-from libottdadmin2.event import Event
 
 
 class SoapClient(TAC):
@@ -64,6 +63,12 @@ class SoapClient(TAC):
     def playAsPlayer(self, value):
         self._playAsPlayer = value
 
+def handles_packet(*items):
+    packets = [x if isinstance(x, (int, long)) else x.packetID for x in items]
+    def __inner(func):
+        func.handles_packet = packets
+        return func
+    return __inner
 
 class Soap(callbacks.Plugin):
     """
@@ -75,7 +80,27 @@ class Soap(callbacks.Plugin):
         self.__parent = super(Soap, self)
         self.__parent.__init__(irc)
         self.e = threading.Event()
-        self._createSoapClient()
+        self.irc = irc
+        self._createSoapClient(irc)
+        if self.connection.channel in irc.state.channels:
+            success = self._initializeConnection(irc)
+            if success:
+                self._startReceiveThread()
+                text = 'connected' # to %s' % self.connection.serverinfo.name
+                self._msgChannel(irc, self.connection.channel, text)
+
+    def _rcvAdminChat(self, action, destType, clientID, message, data):
+        self.log.info('called rcvAdminChat')
+        irc = self.irc
+        client = self.connection.clients.get(clientID)
+        if client:
+            name = client.name
+        else:
+            name = clientID
+        if action == Action.CHAT:
+            name = '<%s>' % name
+            text = '%s %s' % (name, message)
+            self._msgChannel(irc, self.connection.channel, text)
 
     def die(self):
         try:
@@ -86,8 +111,13 @@ class Soap(callbacks.Plugin):
         time.sleep(self.connection.timeout)
         self.__parent.die()
 
+    def _startReceiveThread(self):
+        t = threading.Thread(target = self._pollForData, name = 'SoapPollingThread')
+        t.daemon = True
+        t.start()
+
     def _pollForData(self):
-        self.log.info('start polling')
+        self.log.info('Ready to receive data')
         pollcount = 0
         while not self.e.isSet():
             pollcount += 1
@@ -96,33 +126,38 @@ class Soap(callbacks.Plugin):
                 if packets is None or packets is False:
                     break
                 for packet, data in packets:
-                    self.log.info('received at %s: %s -> %r' % (pollcount, packet, data))
+                    if str(packet) == 'ServerChat':
+                        self.log.info('ServerChat: %r' % data)
+                        self._rcvAdminChat(int(data['action']), int(data['destType']), int(data['clientID']), data['message'], int(data['data']))
+                    elif str(packet) == 'ServerConsole':
+                        pass
+                    else:
+                        self.log.info('Unrecognized packet: %s -> %r' % (packet, data))
             except Exception, e:
-                self.log.info('exception caught at %s: %s' % (pollcount, str(e)))
-
-
-        self.log.info('end polling')
+                self.log.info('exception caught: %s' % str(e))
+        self.log.info('No longer listening')
         self.connection.disconnect()
 
-    def _createSoapClient(self):
+    def _createSoapClient(self, irc):
         self.connection = SoapClient()
         self.connection.configure(
-            password = self.registryValue('password'),
-            host = self.registryValue('host'),
-            port = self.registryValue('port'),
-            channel = self.registryValue('channel'),
-            allowOps = self.registryValue('allowOps'),
+            password    = self.registryValue('password'),
+            host        = self.registryValue('host'),
+            port        = self.registryValue('port'),
+            timeout     = float(0.5),
+            channel     = self.registryValue('channel'),
+            allowOps    = self.registryValue('allowOps'),
             playAsPlayer = self.registryValue('playAsPlayer'),
-            name = 'Soap')
+            name        = '%s-Soap' % irc.nick)
 
-    def _initializeConnection(self):
+    def _initializeConnection(self, irc):
         self.e.clear()
-        self._createSoapClient()
+        self._createSoapClient(irc)
         self.connection.connect()
         protocol_response = None
         try:
             protocol_response = self.connection.recv_packet()
-            self.log.debug('Protocol: %s', protocol_response)
+            # self.log.debug('Protocol: %s', protocol_response)
             if protocol_response is None:
                 self.log.info('no response from server')
                 return False
@@ -131,11 +166,6 @@ class Soap(callbacks.Plugin):
             return False
         else:
             return True
-
-    def _startReceiveThread(self):
-        t = threading.Thread(target=self._pollForData)
-        t.daemon = True
-        t.start()
 
     def _checkPermission(self, irc, msg, channel, allowOps):
         capable = ircdb.checkCapability(msg.prefix, 'trusted')
@@ -148,19 +178,23 @@ class Soap(callbacks.Plugin):
             else:
                 return False
 
+    def _msgChannel(self, irc, channel, msg):
+        if channel in irc.state.channels:
+            irc.queueMsg(ircmsgs.privmsg(channel, msg))
+
     def apconnect(self, irc, msg, args):
         """ no arguments
-        
+
         connect to AdminPort of OpenTTD server
         """
-        
+
         if irc.isChannel(msg.args[0]) and not msg.args[0] == self.connection.channel:
             return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
             if self.connection.is_connected:
                 irc.reply('Already connected!!', prefixNick = False)
             else:
-                success = self._initializeConnection()
+                success = self._initializeConnection(irc)
                 if success:
                     self._startReceiveThread()
                     irc.reply('Connected', prefixNick = False)
@@ -170,7 +204,7 @@ class Soap(callbacks.Plugin):
 
     def apdisconnect(self, irc, msg, args):
         """ no arguments
-        
+
         disconnect from server
         """
 
@@ -185,17 +219,17 @@ class Soap(callbacks.Plugin):
             else:
                 irc.reply('Not connected!!', prefixNick = False)
     apdisconnect = wrap(apdisconnect)
-    
+
     def rcon(self, irc, msg, args, command):
         """ <rcon command>
-        
+
         sends a rcon command to openttd
         """
-        
+
         if irc.isChannel(msg.args[0]) and not msg.args[0] == self.connection.channel:
             return
         if self._checkPermission(irc, msg, self.connection.channel, self.connection.allowOps):
-            
+
             if not self.connection.is_connected:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
@@ -207,7 +241,19 @@ class Soap(callbacks.Plugin):
         else:
                 irc.reply('Not connected!!', prefixNick = False)
     rcon = wrap(rcon, ['text'])
-                
+
+    def doPrivmsg(self, irc, msg):
+        (channel, text) = msg.args
+        if not irc.isChannel(channel):
+            return
+        actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, channel)
+        # irc.reply(text[:1])
+        if actionChar in text[:1]:
+            return
+        if channel == self.connection.channel:
+            message = '<%s> %s' % (msg.nick, text)
+            self.connection.send_packet(AdminChat, action = 3, destType = 0, clientID = 1, message = message)
+        
 Class = Soap
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:
