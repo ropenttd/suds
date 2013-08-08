@@ -85,29 +85,43 @@ class Soap(callbacks.Plugin):
         self.irc = irc
         self._createSoapClient(irc)
         if self.connection.channel in irc.state.channels and self.connection.autoConnect:
-            success = self._initializeConnection(irc)
-            if success:
-                self._startReceiveThread()
-                while self.connection.serverinfo.name == None:
-                    pass
-                text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
-                self._msgChannel(irc, self.connection.channel, text)
+            self._connectOTTD(irc)
+            # success = self._initializeConnection(irc)
+            # if success:
+                # self._startReceiveThread()
+                # while self.connection.serverinfo.name == None:
+                    # pass
+                # text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
+                # self._msgChannel(irc, self.connection.channel, text)
 
     def doJoin(self, irc, msg):
         if (msg.nick == irc.nick
             and msg.args[0] == self.connection.channel
             and self.connection.autoConnect
             and not self.connection.is_connected):
-            
-            self.log.info('passed last check')
-            success = self._initializeConnection(irc)
-            if success:
-                self._startReceiveThread()
-                while self.connection.serverinfo.name == None:
-                    pass
-                text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
-                irc.reply(text, prefixNick = False)
 
+            self._connectOTTD(irc)
+            # success = self._initializeConnection(irc)
+            # if success:
+                # self._startReceiveThread()
+                # while self.connection.serverinfo.name == None:
+                    # pass
+                # text = 'connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
+                # irc.reply(text, prefixNick = False)
+    
+    def _connectOTTD(self, irc, source = None):
+        success = self._initializeConnection(irc)
+        if success:
+            self._startReceiveThread()
+            while self.connection.serverinfo.name == None:
+                pass
+            text = 'Connected to %s(%s)' % (self.connection.serverinfo.name, self.connection.serverinfo.version)
+        else:
+            text = 'Connection failed.'
+        self._msgChannel(irc, self.connection.channel, text)
+        if not source == None:
+            self._msgChannel(irc, source, text)
+                
     def _rcvAdminChat(self, action, destType, clientID, message, data):
         self.log.info('called rcvAdminChat')
         irc = self.irc
@@ -147,7 +161,12 @@ class Soap(callbacks.Plugin):
                 for packet, data in packets:
                     if str(packet) == 'ServerChat':
                         self.log.info('ServerChat: %r' % data)
-                        self._rcvAdminChat(int(data['action']), int(data['destType']), int(data['clientID']), data['message'], int(data['data']))
+                        self._rcvAdminChat(
+                            data['action'],
+                            data['destType'],
+                            data['clientID'],
+                            data['message'],
+                            data['data'])
                     elif str(packet) == 'ServerConsole':
                         pass
                     else:
@@ -199,7 +218,7 @@ class Soap(callbacks.Plugin):
                 return False
 
     def _msgChannel(self, irc, channel, msg):
-        if channel in irc.state.channels:
+        if channel in irc.state.channels or irc.isNick(channel):
             irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
     def apconnect(self, irc, msg, args):
@@ -214,12 +233,7 @@ class Soap(callbacks.Plugin):
             if self.connection.is_connected:
                 irc.reply('Already connected!!', prefixNick = False)
             else:
-                success = self._initializeConnection(irc)
-                if success:
-                    self._startReceiveThread()
-                    irc.reply('Connected', prefixNick = False)
-                else:
-                    irc.reply('Connection failed', prefixNick = False)
+                self._connectOTTD(irc, source = msg.nick)
     apconnect = wrap(apconnect)
 
     def apdisconnect(self, irc, msg, args):
@@ -271,7 +285,11 @@ class Soap(callbacks.Plugin):
             return
         if channel == self.connection.channel:
             message = 'IRC <%s> %s' % (msg.nick, text)
-            self.connection.send_packet(AdminChat, action = 3, destType = 0, clientID = 0, message = message)
+            self.connection.send_packet(AdminChat,
+                action = Action.CHAT,
+                destType = DestType.BROADCAST,
+                clientID = ClientID.SERVER,
+                message = message)
         
 Class = Soap
 
