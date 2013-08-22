@@ -37,7 +37,7 @@ __url__ = '' # 'http://supybot.com/Members/yourname/OttdAdmin/download'
 
 import config
 import plugin
-reload(config)
+reload(soapclient)
 reload(plugin)
 # In case we're being reloaded.
 # Add more reloads here if you add third-party modules and want them to be

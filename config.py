@@ -31,30 +31,32 @@ Soap = conf.registerPlugin('Soap')
 # conf.registerGlobalValue(Soap, 'someConfigVariableName',
 #     registry.Boolean(False, """Help for someConfigVariableName."""))
 
-# irc-side configuration settings
-conf.registerGlobalValue(Soap, 'channel',
-    registry.String('#turbulent', """ The channel you wish to use for OpenTTD
-    communication """))
+
+# General configuration settings
+conf.registerGlobalValue(Soap, 'channels',
+    registry.SpaceSeparatedListOfStrings('', """ The channels you wish to use
+        for OpenTTD communication """))
 
 # OpenTTD server configuration
-conf.registerGlobalValue(Soap, 'host',
+conf.registerChannelValue(Soap, 'serverID',
+    registry.String('default', """ Short name for the server, used for issuing
+    commands via query. no spaces allowed """))
+conf.registerChannelValue(Soap, 'host',
     registry.String('127.0.0.1', """ The hostname or IP-adress of the OpenTTD
     server you wish the bot to connect to """))
-conf.registerGlobalValue(Soap, 'port',
+conf.registerChannelValue(Soap, 'port',
     registry.Integer(3977, """ The port of the server's adminport """))
-conf.registerGlobalValue(Soap, 'password',
+conf.registerChannelValue(Soap, 'password',
     registry.String('password', """ The password as set in openttd.cfg """))
-conf.registerGlobalValue(Soap, 'timeout',
-    registry.Float(0.4, """ Timeout in seconds """))
 
-# Miscellanious settings
-conf.registerGlobalValue(Soap, 'autoConnect',
+# Miscellanious server-specific settings
+conf.registerChannelValue(Soap, 'autoConnect',
     registry.Boolean(True, """ Connect automatically? """))
-conf.registerGlobalValue(Soap, 'allowOps',
+conf.registerChannelValue(Soap, 'allowOps',
     registry.Boolean(True, """ Setting this to True will allow any op as well
     as trusted user in the channel to execute soap commands . Setting this to
     false only allows trusted users to do so """ ))
-conf.registerGlobalValue(Soap, 'playAsPlayer',
+conf.registerChannelValue(Soap, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
     name. False will get them moved to spectators any time they try to join a
     company """))

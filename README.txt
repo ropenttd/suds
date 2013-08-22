@@ -8,7 +8,7 @@ IRC: I can usually be found in #openttd on OFTC
 Prerequisites:
  Openttd server
  Supybot set up in a channel
- libottdadmin2 by Xaroth installed
+ libottdadmin2 by xaroth installed
 
  If you don't have OpenTTD installed, you probably won't need this plugin. I
  recommend you download it and play some at www.openttd.org. Come back when you
@@ -28,7 +28,7 @@ Installing libottdadmin2:
 
  The other way is to copy the libottdadmin2 dir into the Soap plugin directory.
  Copied right client.py should be found at this path:
- <PathToPlugins>/Soap/libottdadmin2/client.py
+ PathToPlugins/Soap/libottdadmin2/client.py
  This will give the same functionality, but only for the Soap plugin. On the
  upside, no sudo access required.
 
@@ -38,9 +38,8 @@ Commands:
  more to be added
 
 Todo:
- rcon command replies display
+ chat bridge
+ rcon commands
+ pause and related stuff
  screenshots
-
-Credits:
- Taede Werkhoven: For writing the plugin
- Xaroth: For writing libottdadmin2, which also served as an example for Soap
+ and loads more
