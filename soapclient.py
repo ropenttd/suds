@@ -61,7 +61,10 @@ class SoapClient(TrackingAdminClient):
         self._attachEvents()
 
     def _attachEvents(self):
-        self.events.chat           += self._rcvChat
+        self.events.clientjoin      += self._rcvClientJoin
+        self.events.clientupdate    += self._rcvClientUpdate
+        self.events.clientquit      += self._rcvClientQuit
+        self.events.chat            += self._rcvChat
 
     def copy(self):
         obj = SoapClient(self.events)
@@ -75,27 +78,18 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvChat(self, **kwargs):
         data = dict(kwargs.items())
-        data['conn'] = self
+        data['connID'] = self._ID
         data['irc'] = self._irc
         self.soapEvents.chat(**data)
 
-    def _rcvClientJoin(self, **kwargs):
-        data = dict(kwargs.items())
-        data['conn'] = self
-        data['irc'] = self._irc
-        self.soapEvents.clientjoin(**data)
+    def _rcvClientJoin(self, client):
+        self.soapEvents.clientjoin(self._irc, self._ID, client)
 
-    def _rcvClientQuit(self, **kwargs):
-        data = dict(kwargs.items())
-        data['conn'] = self
-        data['irc'] = self._irc
-        self.soapEvents.clientquit(**data)
+    def _rcvClientQuit(self, client, errorcode):
+        self.soapEvents.clientquit(self._irc, self._ID, client, errorcode)
 
-    def _rcvClientUpdate(self, **kwargs):
-        data = dict(kwargs.items())
-        data['conn'] = self
-        data['irc'] = self._irc
-        self.soapEvents.clientupdate(**data)
+    def _rcvClientUpdate(self, old, client, changed):
+        self.soapEvents.clientupdate(self._irc, self._ID, old, client, changed)
 
 
 

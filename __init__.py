@@ -36,9 +36,13 @@ __contributors__ = {}
 __url__ = '' # 'http://supybot.com/Members/yourname/OttdAdmin/download'
 
 import config
+import soapclient
+import libottdadmin2
 import plugin
 reload(soapclient)
+reload(libottdadmin2)
 reload(plugin)
+
 # In case we're being reloaded.
 # Add more reloads here if you add third-party modules and want them to be
 # reloaded when this plugin is reloaded.  Don't forget to import them as well!

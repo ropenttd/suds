@@ -52,8 +52,6 @@ class Soap(callbacks.Plugin):
             conn = SoapClient()
             self._attachEvents(conn)
             self._initSoapClient(conn, irc, channel)
-            self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
-            self.log.info('registering %s with fileno: %s' % (conn.ID, conn.fileno()))
             self.connections.append(conn)
         self.stopPoll = threading.Event()
         self.pollingThread = threading.Thread(target = self._pollThread)
@@ -72,10 +70,8 @@ class Soap(callbacks.Plugin):
             if len(polList) == 0:
                 time.sleep(1)
             else:
-                self.log.info('%s active connections, list: %s' % (len(polList), polList))
                 events = self._pollObj.poll(timeout * POLL_MOD)
                 for fileno, event in events:
-                    self.log.info('fileno: %s - event: %s' % (fileno, event))
                     if polList.count(fileno) == 0:
                         continue
                     conn = self._getConnection('fileno', fileno)
@@ -90,18 +86,13 @@ class Soap(callbacks.Plugin):
                         self._disconnect(conn, True)
             if self.stopPoll.isSet():
                 break
-            self.log.info('reached end of loop')
-        self.log.info('Terminating loop. I\'ll be back')
 
     def die(self):
         try:
             for conn in self.connections:
-                self.log.info('Disconnecting %s' % conn.ID)
                 conn.disconnect()
             self.stopPoll.set()
-            self.log.info('Thread event set, waiting for thread to join')
             self.pollingThread.join()
-            self.log.info('Thread joined')
         except NameError:
             pass
 
@@ -136,6 +127,7 @@ class Soap(callbacks.Plugin):
             allowOps    = self.registryValue('allowOps', channel),
             playAsPlayer = self.registryValue('playAsPlayer', channel),
             name        = '%s-Soap' % irc.nick)
+        self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
 
     def _disconnect(self, conn, forced):
         try:
@@ -144,8 +136,8 @@ class Soap(callbacks.Plugin):
             pass
         if forced:
             conn.force_disconnect()
-        else
-            conne.disconnect()
+        else:
+            conn.disconnect()
 
 
 
@@ -181,7 +173,7 @@ class Soap(callbacks.Plugin):
         if channel in irc.state.channels or irc.isNick(channel):
             irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
-    def _movePlayer(self, irc, conn, client):
+    def _moveToSpectators(self, irc, conn, client):
         command = 'move %s 255' % client.id
 
         self.send_packet(AdminRcon, command = command)
@@ -198,12 +190,17 @@ class Soap(callbacks.Plugin):
 
     # Packet Handlers
 
-    def _rcvChat(self, irc, conn, client, action, destType, clientID, message, data):
+    def _rcvChat(self, irc, connID, client, action, destType, clientID, message, data):
+        conn = self._getConnection('ID', connID)
+        if not conn:
+            return
+
         clientName = str(clientID)
         clientCompany = None
         if client != clientID:
             clientName = client.name
-            clientCompany = conn.companies.get(client.play_as, None)
+            self.log.info('client playing as %s' % client.play_as)
+            clientCompany = conn.companies.get(client.play_as)
         if clientCompany:
             companyName = clientCompany.name
             companyID = clientCompany.id + 1
@@ -223,30 +220,42 @@ class Soap(callbacks.Plugin):
             text = '*** %s has joined %s (Company #%s)' % (clientName, companyName, companyID)
             self._msgChannel(irc, conn._channel, text)
             if not conn.playAsPlayer and 'player' in clientName.lower():
-                self._movePlayer(irc, conn, client)
+                self._ToSpectators(irc, conn, client)
         elif action == Action.COMPANY_NEW:
             text = '*** %s had created a new company: %s(Company #%s)' % (clientName, companyName, companyID)
             self._msgChannel(irc, conn._channel, text)
             if not conn.playAsPlayer and 'player' in clientName.lower():
-                self._movePlayer(irc, conn, client)
+                self._moveToSpectators(irc, conn, client)
         else:
             text = 'AdminChat: Action %r, DestType %r, name %s, companyname %s, message %r, data %r' % (
                 action, destType, clientName, companyName, message, data)
             self._msgChannel(irc, conn._channel, text)
 
-    def _rcvClientJoin(self, irc, conn, client):
+    def _rcvClientJoin(self, irc, connID, client):
+        conn = self._getConnection('ID', connID)
+        if not conn:
+            return
+
         if isinstance(client, (long, int)):
             return
         text = '*** %s (Client #%s) has joined the game' % (client.name, client.id)
         self._msgChannel(conn._irc, conn._channel, text)
 
-    def _rcvClientQuit(self, irc, conn, client, errorcode):
+    def _rcvClientQuit(self, irc, connID, client, errorcode):
+        conn = self._getConnection('ID', connID)
+        if not conn:
+            return
+
         if isinstance(client, (long, int)):
             return
         text = '*** %s (Client #%s) has left the game (leaving)' % (client.name, client.id)
         self._msgChannel(conn._irc, conn._channel, text)
 
-    def _rcvClientUpdate(self, irc, conn, old, client, changed):
+    def _rcvClientUpdate(self, irc, connID, old, client, changed):
+        conn = self._getConnection('ID', connID)
+        if not conn:
+            return
+
         if 'name' in changed:
             text = "*** %s is now known as %s" % (old.name, client.name)
             self._msgChannel(conn._irc, conn._channel, text)
@@ -286,9 +295,6 @@ class Soap(callbacks.Plugin):
                     if c.ID == conn.ID:
                         self.connections[i] = conn
                         break
-                self._initSoapClient(conn, irc, conn.channel)
-                self.log.info('registering %s with fileno: %s' % (conn.ID, conn.fileno()))
-                self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
                 self._connectOTTD(irc, conn, source)
     apconnect = wrap(apconnect, [optional('text')])
 
