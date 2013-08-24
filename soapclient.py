@@ -78,18 +78,17 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvChat(self, **kwargs):
         data = dict(kwargs.items())
-        data['connID'] = self._ID
-        data['irc'] = self._irc
+        data['connChan'] = self._channel
         self.soapEvents.chat(**data)
 
     def _rcvClientJoin(self, client):
-        self.soapEvents.clientjoin(self._irc, self._ID, client)
+        self.soapEvents.clientjoin(self._channel, client)
 
     def _rcvClientQuit(self, client, errorcode):
-        self.soapEvents.clientquit(self._irc, self._ID, client, errorcode)
+        self.soapEvents.clientquit(self._channel, client, errorcode)
 
     def _rcvClientUpdate(self, old, client, changed):
-        self.soapEvents.clientupdate(self._irc, self._ID, old, client, changed)
+        self.soapEvents.clientupdate(self._channel, old, client, changed)
 
 
 
