@@ -56,6 +56,9 @@ conf.registerChannelValue(Soap, 'allowOps',
     registry.Boolean(True, """ Setting this to True will allow any op as well
     as trusted user in the channel to execute soap commands . Setting this to
     false only allows trusted users to do so """ ))
+conf.registerChannelValue(Soap, 'minPlayers',
+    registry.Integer(0, """ defalt minimum number of players for the server
+    to unpause itself. 0 means game never pauses unless manually paused """))
 conf.registerChannelValue(Soap, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
     name. False will get them moved to spectators any time they try to join a

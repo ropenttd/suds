@@ -26,7 +26,7 @@ class SoapEvents(object):
         # self.shutdown       = Event()
         # self.new_game       = Event()
 
-        # self.new_map        = Event()
+        self.new_map        = Event()
         # self.protocol       = Event()
 
         # self.datechanged    = Event()
@@ -44,7 +44,7 @@ class SoapEvents(object):
         # self.companyeconomy = Event()
 
         self.chat           = Event()
-        # self.rcon           = Event()
+        self.rcon           = Event()
         # self.console        = Event()
 
         # self.pong           = Event()
@@ -59,12 +59,18 @@ class SoapClient(TrackingAdminClient):
         super(SoapClient, self).__init__(events)
         self.soapEvents = SoapEvents()
         self._attachEvents()
+        self.rcon = 'Silent'
 
     def _attachEvents(self):
+        self.events.new_map        += self._rcvNewMap
+
         self.events.clientjoin      += self._rcvClientJoin
         self.events.clientupdate    += self._rcvClientUpdate
         self.events.clientquit      += self._rcvClientQuit
+
         self.events.chat            += self._rcvChat
+        self.events.rcon            += self._rcvRcon
+        self.events.rconend         += self._rcvRconEnd
 
     def copy(self):
         obj = SoapClient(self.events)
@@ -76,10 +82,8 @@ class SoapClient(TrackingAdminClient):
 
     # Insert connection and irc info into parameters
 
-    def _rcvChat(self, **kwargs):
-        data = dict(kwargs.items())
-        data['connChan'] = self._channel
-        self.soapEvents.chat(**data)
+    def _rcvNewMap(self, mapinfo, serverinfo):
+        self.soapEvents.new_map(self._channel, mapinfo, serverinfo)
 
     def _rcvClientJoin(self, client):
         self.soapEvents.clientjoin(self._channel, client)
@@ -90,18 +94,30 @@ class SoapClient(TrackingAdminClient):
     def _rcvClientUpdate(self, old, client, changed):
         self.soapEvents.clientupdate(self._channel, old, client, changed)
 
+    def _rcvChat(self, **kwargs):
+        data = dict(kwargs.items())
+        data['connChan'] = self._channel
+        self.soapEvents.chat(**data)
+
+    def _rcvRcon(self, result, colour):
+        self.soapEvents.rcon(self._channel, result, colour)
+
+    def _rcvRconEnd(self, command):
+        self.rcon = 'Silent'
+
 
 
     # Store some extra info
 
     _settable_args = TrackingAdminClient._settable_args + [
-        'irc', 'ID', 'channel',
-        'autoConnect', 'allowOps', 'playAsPlayer', 'polling']
+        'irc', 'ID', 'channel', 'autoConnect', 'allowOps',
+        'playAsPlayer', 'polling']
     _irc = None
     _ID = 'Default'
     _channel = None
     _autoConnect = False
     _allowOps = False
+    _minPlayers = 0
     _polling = False
     _playAsPlayer = True
     _registered = False
@@ -145,6 +161,14 @@ class SoapClient(TrackingAdminClient):
     @allowOps.setter
     def allowOps(self, value):
         self._allowOps = value
+
+    @property
+    def minPlayers(self):
+        return self._minPlayers
+
+    @minPlayers.setter
+    def minPlayers(self, value):
+        self._minPlayers = value
 
     @property
     def polling(self):

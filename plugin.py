@@ -52,7 +52,8 @@ class Soap(callbacks.Plugin):
             self._attachEvents(conn)
             self._initSoapClient(conn, irc, channel)
             self.connections.append(conn)
-
+            if conn.autoConnect:
+                self._connectOTTD(irc, conn, conn.channel)
         self.stopPoll = threading.Event()
         self.pollingThread = threading.Thread(target = self._pollThread)
         self.pollingThread.daemon = True
@@ -64,7 +65,7 @@ class Soap(callbacks.Plugin):
         while True:
             polList = []
             for conn in self.connections:
-                if conn.is_connected and conn._poll_registered:
+                if conn.is_connected:
                     polList.append(conn.fileno())
             if len(polList) >= 1:
                 events = self._pollObj.poll(timeout * POLL_MOD)
@@ -77,7 +78,9 @@ class Soap(callbacks.Plugin):
                         if packet == None:
                             polList.remove(fileno)
                             self._disconnect(conn, True)
-                            continue
+                        else:
+                            #self.log.info('%s - %s' % (conn.ID, packet))
+                            pass
                     elif (event & POLLERR) or (event & POLLHUP):
                         polList.remove(fileno)
                         self._disconnect(conn, True)
@@ -90,29 +93,49 @@ class Soap(callbacks.Plugin):
     def die(self):
         try:
             for conn in self.connections:
-                conn.disconnect()
+                self._disconnect(conn, False)
             self.stopPoll.set()
             self.pollingThread.join()
         except NameError:
             pass
+
+    def doJoin(self, irc, msg):
+        channel = msg.args[0].lower()
+        conn = None
+        if msg.nick == irc.nick and self.channels.count(channel) >=1:
+            conn = self._getConnectionFromID('channel', channel)
+            if not conn:
+                return
+            if conn.is_connected:
+                text = 'Connected to %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
+                self._msgChannel(conn._irc, conn.channel, text)
+
 
 
 
     # Connection management
 
     def _attachEvents(self, conn):
-        conn.soapEvents.chat            += self._rcvChat
+        conn.soapEvents.new_map         += self._rcvNewMap
+
         conn.soapEvents.clientjoin      += self._rcvClientJoin
         conn.soapEvents.clientquit      += self._rcvClientQuit
         conn.soapEvents.clientupdate    += self._rcvClientUpdate
 
+        conn.soapEvents.chat            += self._rcvChat
+        conn.soapEvents.rcon            += self._rcvRcon
+
     def _connectOTTD(self, irc, conn, source = None):
-        self._initSoapClient(conn, irc, conn.channel)
-        conn.connect()
         text = 'Connecting...'
         self._msgChannel(irc, conn.channel, text)
+        conn = self._refreshConnection(conn)
         if source != conn.channel and source != None:
             self._msgChannel(irc, source, text)
+        self._initSoapClient(conn, irc, conn.channel)
+        conn.connect()
+        if conn.is_connected:
+            conn.polling = True
+
 
 
     def _initSoapClient(self, conn, irc, channel):
@@ -125,6 +148,7 @@ class Soap(callbacks.Plugin):
             channel     = channel,
             autoConnect = self.registryValue('autoConnect', channel),
             allowOps    = self.registryValue('allowOps', channel),
+            minPlayers  = self.registryValue('minPlayers', channel),
             playAsPlayer = self.registryValue('playAsPlayer', channel),
             name        = '%s-Soap' % irc.nick)
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
@@ -132,8 +156,9 @@ class Soap(callbacks.Plugin):
     def _disconnect(self, conn, forced):
         try:
             self._pollObj.unregister(conn.fileno())
-        except KeyError:
+        except:
             pass
+        conn.polling = False
         if forced:
             conn.force_disconnect()
         else:
@@ -155,8 +180,6 @@ class Soap(callbacks.Plugin):
                 return False
 
     def _getConnection(self, source, serverID = None):
-        self.log.info(source)
-        #self.log.info(serverID)
         if not serverID is None:
             if ircutils.isChannel(serverID):
                 conn = self._getConnectionFromID('channel', serverID)
@@ -170,17 +193,17 @@ class Soap(callbacks.Plugin):
         return conn
 
     def _getConnectionFromID(self, which, connID):
-        if which == 'channel':
+        if which == 'fileno':
+            for conn in self.connections:
+                if conn.fileno() == connID:
+                    return conn
+        elif which == 'channel':
             for conn in self.connections:
                 if conn.channel == connID:
                     return conn
         elif which == 'ID':
             for conn in self.connections:
                 if conn.ID == connID:
-                    return conn
-        elif which == 'fileno':
-            for conn in self.connections:
-                if conn.fileno() == connID:
                     return conn
         return None
 
@@ -191,14 +214,13 @@ class Soap(callbacks.Plugin):
     def _moveToSpectators(self, irc, conn, client):
         command = 'move %s 255' % client.id
 
-        self.send_packet(AdminRcon, command = command)
-        text = 'Please change your name before joining/starting a company'
+        conn.send_packet(AdminRcon, command = command)
+        text = '%s: Please change your name before joining/starting a company' % client.name
         conn.send_packet(AdminChat,
-            action = Action.CHAT_CLIENT,
-            destType = DestType.CLIENT,
-            clientID = client.id,
+            action = Action.CHAT,
+            destType = DestType.BROADCAST,
+            clientID = ClientID.SERVER,
             message = text)
-        text = '[private] -> %s: %s' % (client.name, text)
         self._msgChannel(irc, conn._channel, text)
 
     def _refreshConnection(self, conn):
@@ -213,46 +235,14 @@ class Soap(callbacks.Plugin):
 
     # Packet Handlers
 
-    def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
+    def _rcvNewMap(self, connChan, mapinfo, serverinfo):
         conn = self._getConnectionFromID('channel', connChan)
         if not conn:
             return
         irc = conn.irc
 
-        clientName = str(clientID)
-        clientCompany = None
-        if client != clientID:
-            clientName = client.name
-            clientCompany = conn.companies.get(client.play_as)
-        if clientCompany:
-            companyName = clientCompany.name
-            companyID = clientCompany.id + 1
-        else:
-            companyName = 'Unknown'
-            companyID = '?'
-
-        if action == Action.CHAT:
-            text = '<%s> %s' % (clientName, message)
-            self._msgChannel(irc, conn._channel, text)
-        elif action == Action.CHAT_COMPANY or action == Action.CHAT_CLIENT:
-            pass
-        elif action == Action.COMPANY_SPECTATOR:
-            text = '*** %s has joined spectators' % clientName
-            self._msgChannel(irc, conn._channel, text)
-        elif action == Action.COMPANY_JOIN:
-            text = '*** %s has joined %s (Company #%s)' % (clientName, companyName, companyID)
-            self._msgChannel(irc, conn._channel, text)
-            if not conn.playAsPlayer and 'player' in clientName.lower():
-                self._moveToSpectators(irc, conn, client)
-        elif action == Action.COMPANY_NEW:
-            text = '*** %s had created a new company: %s(Company #%s)' % (clientName, companyName, companyID)
-            self._msgChannel(irc, conn._channel, text)
-            if not conn.playAsPlayer and 'player' in clientName.lower():
-                self._moveToSpectators(irc, conn, client)
-        else:
-            text = 'AdminChat: Action %r, DestType %r, name %s, companyname %s, message %r, data %r' % (
-                action, destType, clientName, companyName, message, data)
-            self._msgChannel(irc, conn._channel, text)
+        text = 'Connected to %s (Version %s)' % (serverinfo.name, serverinfo.version)
+        self._msgChannel(conn._irc, connChan, text)
 
     def _rcvClientJoin(self, connChan, client):
         conn = self._getConnectionFromID('channel', connChan)
@@ -282,17 +272,66 @@ class Soap(callbacks.Plugin):
             text = "*** %s is now known as %s" % (old.name, client.name)
             self._msgChannel(conn._irc, conn._channel, text)
 
+    def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
+        conn = self._getConnectionFromID('channel', connChan)
+        if not conn:
+            return
+        irc = conn.irc
+
+        clientName = str(clientID)
+        clientCompany = None
+        if client != clientID:
+            clientName = client.name
+            clientCompany = conn.companies.get(client.play_as)
+        if clientCompany:
+            companyName = clientCompany.name
+            companyID = clientCompany.id + 1
+        else:
+            companyName = 'Unknown'
+            companyID = '?'
+
+        if action == Action.CHAT:
+            text = '<%s> %s' % (clientName, message)
+            self._msgChannel(irc, conn._channel, text)
+        elif action == Action.COMPANY_SPECTATOR:
+            text = '*** %s has joined spectators' % clientName
+            self._msgChannel(irc, conn._channel, text)
+        elif action == Action.COMPANY_JOIN:
+            text = '*** %s has joined %s (Company #%s)' % (clientName, companyName, companyID)
+            self._msgChannel(irc, conn._channel, text)
+            clientName = clientName.lower()
+            if clientName.startswith('player') and not conn.playAsPlayer:
+                self._moveToSpectators(irc, conn, client)
+        elif action == Action.COMPANY_NEW:
+            text = '*** %s had created a new company: %s(Company #%s)' % (clientName, companyName, companyID)
+            self._msgChannel(irc, conn._channel, text)
+            clientName = clientName.lower()
+            if clientName.startswith('player') and not conn.playAsPlayer:
+                self._moveToSpectators(irc, conn, client)
+
+    def _rcvRcon(self, connChan, result, colour):
+        conn = self._getConnectionFromID('channel', connChan)
+        if not conn:
+            return
+        if conn.rcon == 'Silent':
+            return
+        irc = conn.irc
+
+        self._msgChannel(conn._irc, conn.rcon, result)
+
 
 
     # IRC commands
 
     def apconnect(self, irc, msg, args, serverID = None):
-        """ no arguments
+        """ [Server ID or channel]
 
-        connect to AdminPort of OpenTTD server
+        connect to AdminPort of the [specified] OpenTTD server
         """
 
         source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
@@ -301,23 +340,25 @@ class Soap(callbacks.Plugin):
             if conn.is_connected:
                 irc.reply('Already connected!!', prefixNick = False)
             else:
+                # just in case an existing connection failed to de-register upon disconnect
                 try:
                     self._pollObj.unregister(conn.fileno())
                 except KeyError:
                     pass
                 except IOError:
                     pass
-                conn = self._refreshConnection(conn)
                 self._connectOTTD(irc, conn, source)
     apconnect = wrap(apconnect, [optional('text')])
 
     def apdisconnect(self, irc, msg, args, serverID = None):
-        """ no arguments
+        """ [Server ID or channel]
 
-        disconnect from server
+        disconnect from the [specified] server
         """
 
         source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
@@ -333,13 +374,24 @@ class Soap(callbacks.Plugin):
     apdisconnect = wrap(apdisconnect, [optional('text')])
 
     def rcon(self, irc, msg, args, command):
-        """ <rcon command>
+        """ [Server ID or channel] <rcon command>
 
-        sends a rcon command to openttd
+        sends a rcon command to the [specified] openttd server
         """
 
         source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
         serverID = None
+        firstWord = command.partition(' ')[0]
+        conns = []
+        for c in self.connections:
+            conns.append(c.channel)
+            conns.append(c.ID)
+        if firstWord in conns:
+            serverID = firstWord
+            command = command.partition(' ')[2]
+
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
@@ -348,21 +400,28 @@ class Soap(callbacks.Plugin):
             if not conn.is_connected:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
+            if conn.rcon != 'Silent':
+                message = 'Sorry, still processing previous rcon command'
+                irc.reply(message, prefixNick = False)
+                return
             if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
                 message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
                 irc.reply(message, prefixNick = False)
                 return
             else:
+                conn.rcon = source
                 conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
 
     def pause(self, irc, msg, args, serverID = None):
-        """ takes no arguments
+        """ [Server ID or channel]
 
-        pauses the game server
+        pauses the [specified] game server
         """
 
         source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
@@ -375,13 +434,16 @@ class Soap(callbacks.Plugin):
             conn.send_packet(AdminRcon, command = command)
     pause = wrap(pause, [optional('text')])
 
-    def unpause(self, irc, msg, args, serverID = None):
-        """ takes no arguments
+    def auto(self, irc, msg, args, serverID = None):
+        """ [Server ID or channel]
 
-        unpauses the game server, or if min_active_clients > 1, changes the server to autopause mode
+        unpauses the [specified] game server, or if min_active_clients > 1,
+        changes the server to autopause mode
         """
 
         source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
@@ -390,6 +452,32 @@ class Soap(callbacks.Plugin):
             if not conn.is_connected:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
+            command = 'set min_active_clients %s' % conn.minPlayers
+            conn.send_packet(AdminRcon, command = command)
+            command = 'unpause'
+            conn.send_packet(AdminRcon, command = command)
+    auto = wrap(auto, [optional('text')])
+
+    def unpause(self, irc, msg, args, serverID = None):
+        """ [Server ID or channel]
+
+        unpauses the [specified] game server, or if min_active_clients > 1,
+        changes the server to autopause mode
+        """
+
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+
+        if self._checkPermission(irc, msg, conn.channel, conn.allowOps):
+            if not conn.is_connected:
+                irc.reply('Not connected!!', prefixNick = False)
+                return
+            command = 'set min_active_clients 0'
+            conn.send_packet(AdminRcon, command = command)
             command = 'unpause'
             conn.send_packet(AdminRcon, command = command)
     unpause = wrap(unpause, [optional('text')])
@@ -406,6 +494,8 @@ class Soap(callbacks.Plugin):
         if irc.isChannel(source) and source in self.channels:
             conn = self._getConnectionFromID('channel', source)
         if conn == None:
+            return
+        if not conn.is_connected:
             return
 
         actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
