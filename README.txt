@@ -5,10 +5,12 @@ COPYING.txt
 web: http://dev.openttdcoop.org/projects/soap/
 IRC: I can usually be found in #openttd on OFTC
 
+
+
 Prerequisites:
- Openttd server
- Supybot set up in a channel
- libottdadmin2 by Xaroth installed
+ * Openttd server
+ * Supybot set up in a channel
+ * libottdadmin2 by Xaroth installed
 
  If you don't have OpenTTD installed, you probably won't need this plugin. I
  recommend you download it and play some at www.openttd.org. Come back when you
@@ -16,6 +18,15 @@ Prerequisites:
 
  Supybot comes with its own installation instructions and user manual and can be
  found here: http://sourceforge.net/projects/supybot/
+
+
+
+Installation and configuration
+
+ To install Soap, simply copy the Soap directory into the bots plugin directory,
+ and load the plugin once the bot is running.
+
+
 
 Installing libottdadmin2:
  First go to https://github.com/Xaroth/libottdadmin2 and either download the zip
@@ -32,14 +43,69 @@ Installing libottdadmin2:
  This will give the same functionality, but only for the Soap plugin. On the
  upside, no sudo access required.
 
+
+
+Configuration
+
+ Configuration is handled via supybot's config command. First thing you want to
+ configure is the default settings. Soap can handle multiple game-servers, but
+ is bound to 1 server per irc-channel.
+
+ Correct format for config would be:
+    config supybot.plugins.Soap.<setting> <value>
+
+ For instance:
+    config supybot.plugins.Soap.host 127.0.0.1
+
+ This will set the default for any new server to 127.0.0.1
+
+ To change a setting for one server only, you want to specify the channel:
+    config channel [#yourchan] supybot.plugins.Soap.<setting> <value>
+
+ #yourchannel is optional when used in the channel (it will use the current
+ channel), but required when used in queries. You'll want to use the latter for
+ setting the password.
+
+ Example:
+    config channel #mychannel supybot.plugins.Soap.host 127.0.0.1
+
+ can be used anywhere the bot is, whilst:
+    config channel supybot.plugins.Soap.host 127.0.0.1
+
+ will change the host for channel the command was issued in.
+
+ Finally, you want to activate the channels by configuring the list of
+ channels. This is a global value, so theres only one variation:
+    config supybot.plugins.Soap.channels #mychannel #myotherchannel ...
+
+ That will enable below commands for servers tied to those channels. If you
+ didn't specify any settings for a channel, it will pick the default setting instead.
+
+ For a description of the individual variables, open config.py with a text editor.
+
+
+
 Commands:
- apconnect       - connects to the preconfigured openttd server
- apdisconnect    - disconnects from same
- more to be added
+ apconnect      - connects to the preconfigured openttd server
+ apdisconnect   - disconnects from same
+ pause          - manually pauses the game
+ unpause        - manually unpauses the game (sets min_active_clients to 0)
+ auto           - turns on autopause, and re-sets min_active_clients to the
+                    configured amount
+ rcon           - sends an rcon command to the server
+
+ These commands can also be called with channel or serverID as parameter. This can
+ be handy when you want to command a server from a different channel or from
+ private message
+
+
 
 Todo:
- rcon command replies display
  screenshots
+ password rotation
+ file-based stuff (updating/starting openttd etc)
+
+
 
 Credits:
  Taede Werkhoven: For writing the plugin

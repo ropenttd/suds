@@ -39,8 +39,9 @@ conf.registerGlobalValue(Soap, 'channels',
 
 # OpenTTD server configuration
 conf.registerChannelValue(Soap, 'serverID',
-    registry.String('default', """ Short name for the server, used for issuing
-    commands via query. no spaces allowed """))
+    registry.String('default', """ Optional hort name for the server, used for
+    issuing commands via query. no spaces allowed. Should be unique to each
+    server when managing multiple game-servers """))
 conf.registerChannelValue(Soap, 'host',
     registry.String('127.0.0.1', """ The hostname or IP-adress of the OpenTTD
     server you wish the bot to connect to """))
@@ -51,13 +52,14 @@ conf.registerChannelValue(Soap, 'password',
 
 # Miscellanious server-specific settings
 conf.registerChannelValue(Soap, 'autoConnect',
-    registry.Boolean(True, """ Connect automatically? """))
+    registry.Boolean(False, """ Setting this to True will cause the bot to
+    attempt to connect to OpenTTD automatically """))
 conf.registerChannelValue(Soap, 'allowOps',
     registry.Boolean(True, """ Setting this to True will allow any op as well
     as trusted user in the channel to execute soap commands . Setting this to
-    false only allows trusted users to do so """ ))
+    False only allows trusted users to do so """ ))
 conf.registerChannelValue(Soap, 'minPlayers',
-    registry.Integer(0, """ defalt minimum number of players for the server
+    registry.Integer(0, """ The defalt minimum number of players for the server
     to unpause itself. 0 means game never pauses unless manually paused """))
 conf.registerChannelValue(Soap, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
