@@ -17,6 +17,7 @@
 
 from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
+from libottdadmin2.enums import UpdateType, UpdateFrequency
 
 class SoapEvents(object):
     def __init__(self):
@@ -193,3 +194,14 @@ class SoapClient(TrackingAdminClient):
     @registered.setter
     def registered(self, value):
         self._playAsPlayer = value
+
+    update_types = [
+        (UpdateType.CLIENT_INFO,        UpdateFrequency.AUTOMATIC),
+        (UpdateType.COMPANY_INFO,       UpdateFrequency.AUTOMATIC),
+        (UpdateType.COMPANY_ECONOMY,    UpdateFrequency.WEEKLY),
+        (UpdateType.COMPANY_STATS,      UpdateFrequency.WEEKLY),
+        (UpdateType.CHAT,               UpdateFrequency.AUTOMATIC),
+        # (UpdateType.CONSOLE,            UpdateFrequency.AUTOMATIC),
+        # (UpdateType.LOGGING,            UpdateFrequency.AUTOMATIC),
+        (UpdateType.DATE,               UpdateFrequency.DAILY),
+    ]

@@ -26,6 +26,7 @@ import supybot.plugins as plugins
 import threading
 import time
 import socket
+from datetime import datetime
 
 from soapclient import SoapClient
 from libottdadmin2.trackingclient import poll, POLLIN, POLLOUT, POLLERR, POLLHUP, POLLPRI, POLL_MOD
@@ -137,8 +138,6 @@ class Soap(callbacks.Plugin):
         conn.connect()
         if conn.is_connected:
             conn.polling = True
-
-
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -374,6 +373,108 @@ class Soap(callbacks.Plugin):
             else:
                 irc.reply('Not connected!!', prefixNick = False)
     apdisconnect = wrap(apdisconnect, [optional('text')])
+
+    def date(self, irc, msg, args, serverID = None):
+        """ [Server ID or channel]
+
+        display the ingame date of the [specified] server
+        """
+
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        message = '%s' % conn.date.strftime('%b %d %Y')
+        irc.reply(message, prefixNick = False)
+    date = wrap(date, [optional('text')])
+
+    def companies(self, irc, msg, args, serverID = None):
+        """ [Server ID or channel]
+
+        display the companies on the [specified] server
+        """
+
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        companies = False
+        for i in conn.companies:
+            if i == 255:
+                continue
+            comp = None
+            comp = conn.companies.get(i)
+            if comp == None:
+                return
+            companies = True
+            if comp.economy.money >= 0:
+                fortune = 'Fortune: %s' % comp.economy.money
+            else:
+                fortune = 'Debt: %s' % comp.economy.money
+            if comp.economy.currentLoan > 0:
+                loan = ', Loan: %s' % comp.economy.currentLoan
+            else:
+                loan = ''
+            vehicles = 'Vehicles (T: %s R: %s S: %s P: %s)' % (
+                comp.vehicles.train, comp.vehicles.lorry + comp.vehicles.bus,
+                comp.vehicles.ship, comp.vehicles.plane)
+            message = "#%s Name '%s' Established %s, %s%s, %s" % (
+                comp.id+1, comp.name, comp.startyear, fortune, loan, vehicles)
+            irc.reply(message, prefixNick = False)
+        if not companies:
+            message = 'No companies'
+            irc.reply(message, prefixNick = False)
+    companies = wrap(companies, [optional('text')])
+
+    def clients(self, irc, msg, args, serverID = None):
+        """ [Server ID or channel]
+
+        display the companies on the [specified] server
+        """
+
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        clients = False
+        for i in conn.clients:
+            client = None
+            client = conn.clients.get(i)
+            if client == None:
+                return
+            elif client.name == '':
+                continue
+            clients = True
+            if client.play_as == 255:
+                companyName = 'Spectating'
+            else:
+                company = conn.companies.get(client.play_as)
+                companyName = "Company: '%s'" % company.name
+            message = "Client #%s, Name: '%s' %s" % (
+                client.id, client.name, companyName)
+            irc.reply(message, prefixNick = False)
+        if not clients:
+            message = 'No clients connected'
+            irc.reply(message, prefixNick = False)
+    clients = wrap(clients, [optional('text')])
 
     def rcon(self, irc, msg, args, command):
         """ [Server ID or channel] <rcon command>
