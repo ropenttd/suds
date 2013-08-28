@@ -53,7 +53,7 @@ class Soap(callbacks.Plugin):
             self._attachEvents(conn)
             self._initSoapClient(conn, irc, channel)
             self.connections.append(conn)
-            if conn.autoConnect:
+            if self.registryValue('autoConnect', conn.channel):
                 self._connectOTTD(irc, conn, conn.channel)
         self.stopPoll = threading.Event()
         self.pollingThread = threading.Thread(target = self._pollThread)
@@ -147,10 +147,6 @@ class Soap(callbacks.Plugin):
             host        = self.registryValue('host', channel),
             port        = self.registryValue('port', channel),
             channel     = channel,
-            autoConnect = self.registryValue('autoConnect', channel),
-            allowOps    = self.registryValue('allowOps', channel),
-            minPlayers  = self.registryValue('minPlayers', channel),
-            playAsPlayer = self.registryValue('playAsPlayer', channel),
             name        = '%s-Soap' % irc.nick)
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
 
@@ -185,12 +181,13 @@ class Soap(callbacks.Plugin):
         if source == irc.nick.lower():
             source = msg.nick
         conn = self._getConnection(source, serverID)
-
         if conn == None:
             return (None, None)
+        allowOps = self.registryValue('allowOps', conn.channel)
+
         if not needsPermission:
             return (source, conn)
-        elif self._checkPermission(irc, msg, conn.channel, conn.allowOps):
+        elif self._checkPermission(irc, msg, conn.channel, allowOps):
             return (source, conn)
         else:
             return (None, None)
@@ -218,6 +215,7 @@ class Soap(callbacks.Plugin):
         for conn in self.connections:
             if conn.ID == connID:
                 return conn
+        return None
 
     def _getConnectionFromChannel(self, connID):
         for conn in self.connections:
@@ -307,6 +305,7 @@ class Soap(callbacks.Plugin):
         else:
             companyName = 'Unknown'
             companyID = '?'
+        playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
 
         if action == Action.CHAT:
             text = '<%s> %s' % (clientName, message)
@@ -318,13 +317,13 @@ class Soap(callbacks.Plugin):
             text = '*** %s has joined %s (Company #%s)' % (clientName, companyName, companyID)
             self._msgChannel(irc, conn._channel, text)
             clientName = clientName.lower()
-            if clientName.startswith('player') and not conn.playAsPlayer:
+            if clientName.startswith('player') and not playAsPlayer:
                 self._moveToSpectators(irc, conn, client)
         elif action == Action.COMPANY_NEW:
             text = '*** %s had created a new company: %s(Company #%s)' % (clientName, companyName, companyID)
             self._msgChannel(irc, conn._channel, text)
             clientName = clientName.lower()
-            if clientName.startswith('player') and not conn.playAsPlayer:
+            if clientName.startswith('player') and not playAsPlayer:
                 self._moveToSpectators(irc, conn, client)
 
     def _rcvRcon(self, connChan, result, colour):
@@ -547,7 +546,7 @@ class Soap(callbacks.Plugin):
         if not conn.is_connected:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        command = 'set min_active_clients %s' % conn.minPlayers
+        command = 'set min_active_clients %s' % self.registryValue('minPlayers', conn.channel)
         conn.send_packet(AdminRcon, command = command)
         command = 'unpause'
         conn.send_packet(AdminRcon, command = command)

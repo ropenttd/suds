@@ -116,11 +116,7 @@ class SoapClient(TrackingAdminClient):
     _irc = None
     _ID = 'Default'
     _channel = None
-    _autoConnect = False
-    _allowOps = False
-    _minPlayers = 0
     _polling = False
-    _playAsPlayer = True
     _registered = False
 
     @property
@@ -148,44 +144,12 @@ class SoapClient(TrackingAdminClient):
         self._channel = value.lower()
 
     @property
-    def autoConnect(self):
-        return self._autoConnect
-
-    @autoConnect.setter
-    def autoConnect(self, value):
-        self._autoConnect = value
-
-    @property
-    def allowOps(self):
-        return self._allowOps
-
-    @allowOps.setter
-    def allowOps(self, value):
-        self._allowOps = value
-
-    @property
-    def minPlayers(self):
-        return self._minPlayers
-
-    @minPlayers.setter
-    def minPlayers(self, value):
-        self._minPlayers = value
-
-    @property
     def polling(self):
         return self._polling
 
     @polling.setter
     def polling(self, value):
         self._polling = value
-
-    @property
-    def playAsPlayer(self):
-        return self._playAsPlayer
-
-    @playAsPlayer.setter
-    def playAsPlayer(self, value):
-        self._playAsPlayer = value
 
     @property
     def registered(self):
