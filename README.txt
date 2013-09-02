@@ -96,7 +96,8 @@ Commands:
  clients            - lists the clients connected to the server
  companies          - lists companies
  date               - returns the ingame date
- 
+ ding               - should be ping, but that command was taken. Dings the server
+
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
  private message.

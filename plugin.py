@@ -80,7 +80,7 @@ class Soap(callbacks.Plugin):
                             polList.remove(fileno)
                             self._disconnect(conn, True)
                         else:
-                            #self.log.info('%s - %s' % (conn.ID, packet))
+                            self.log.info('%s - %s' % (conn.ID, packet))
                             pass
                     elif (event & POLLERR) or (event & POLLHUP):
                         polList.remove(fileno)
@@ -129,6 +129,8 @@ class Soap(callbacks.Plugin):
 
         conn.soapEvents.chat            += self._rcvChat
         conn.soapEvents.rcon            += self._rcvRcon
+
+        conn.soapEvents.pong            += self._rcvPong
 
     def _connectOTTD(self, irc, conn, source = None):
         text = 'Connecting...'
@@ -597,6 +599,18 @@ class Soap(callbacks.Plugin):
         command = 'unpause'
         conn.send_packet(AdminRcon, command = command)
     unpause = wrap(unpause, [optional('text')])
+
+    def ding(self, irc, msg, args, serverID):
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        conn.ping()
+    ding = wrap(ding, [optional('text')])
 
 
 
