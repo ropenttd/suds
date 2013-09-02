@@ -86,17 +86,21 @@ Configuration
 
 
 Commands:
- apconnect      - connects to the preconfigured openttd server
- apdisconnect   - disconnects from same
- pause          - manually pauses the game
- unpause        - manually unpauses the game (sets min_active_clients to 0)
- auto           - turns on autopause, and re-sets min_active_clients to the
-                    configured amount
- rcon           - sends an rcon command to the server
-
+ apconnect(*)       - connects to the preconfigured openttd server(*)
+ apdisconnect(*)    - disconnects from same
+ pause(*)           - manually pauses the game
+ unpause(*)         - manually unpauses the game (sets min_active_clients to 0)
+ auto(*)            - turns on autopause, and re-sets min_active_clients to the
+                       configured amount
+ rcon(*)            - sends an rcon command to the server
+ clients            - lists the clients connected to the server
+ companies          - lists companies
+ date               - returns the ingame date
+ 
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
- private message
+ private message.
+ Commands marked with (*) require being opped or trusted (depending on allowOps).
 
 
 

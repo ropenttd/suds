@@ -21,8 +21,8 @@ from libottdadmin2.enums import UpdateType, UpdateFrequency
 
 class SoapEvents(object):
     def __init__(self):
-        # self.connected      = Event()
-        # self.disconnected   = Event()
+        self.connected      = Event()
+        self.disconnected   = Event()
 
         # self.shutdown       = Event()
         # self.new_game       = Event()
@@ -48,7 +48,7 @@ class SoapEvents(object):
         self.rcon           = Event()
         # self.console        = Event()
 
-        # self.pong           = Event()
+        self.pong           = Event()
 
 class SoapClient(TrackingAdminClient):
 
@@ -61,9 +61,13 @@ class SoapClient(TrackingAdminClient):
         self.soapEvents = SoapEvents()
         self._attachEvents()
         self.rcon = 'Silent'
+        self.registered = False
 
     def _attachEvents(self):
-        self.events.new_map        += self._rcvNewMap
+        self.events.connected       += self._rcvConnected
+        self.events.disconnected    += self._rcvDisconnected
+
+        self.events.new_map         += self._rcvNewMap
 
         self.events.clientjoin      += self._rcvClientJoin
         self.events.clientupdate    += self._rcvClientUpdate
@@ -73,6 +77,8 @@ class SoapClient(TrackingAdminClient):
         self.events.rcon            += self._rcvRcon
         self.events.rconend         += self._rcvRconEnd
 
+        self.events.pong            += self._rcvPong
+
     def copy(self):
         obj = SoapClient(self.events)
         for prop in self._settable_args:
@@ -81,7 +87,15 @@ class SoapClient(TrackingAdminClient):
 
 
 
-    # Insert connection and irc info into parameters
+    # Insert connection info into parameters
+
+    def _rcvConnected(self):
+        self.registered = True
+        self.soapEvents.connected(self._channel)
+
+    def _rcvDisconnected(self, canRetry):
+        self.registered = False
+        self.soapEvents.disconnected(self._channel, canRetry)
 
     def _rcvNewMap(self, mapinfo, serverinfo):
         self.soapEvents.new_map(self._channel, mapinfo, serverinfo)
@@ -106,6 +120,8 @@ class SoapClient(TrackingAdminClient):
     def _rcvRconEnd(self, command):
         self.rcon = 'Silent'
 
+    def _rcvPong(self, start, end, delta):
+        self.soapEvents.pong(self._channel, start, end, delta)
 
 
     # Store some extra info
@@ -116,8 +132,6 @@ class SoapClient(TrackingAdminClient):
     _irc = None
     _ID = 'Default'
     _channel = None
-    _polling = False
-    _registered = False
 
     @property
     def irc(self):
@@ -143,22 +157,6 @@ class SoapClient(TrackingAdminClient):
     def channel(self, value):
         self._channel = value.lower()
 
-    @property
-    def polling(self):
-        return self._polling
-
-    @polling.setter
-    def polling(self, value):
-        self._polling = value
-
-    @property
-    def registered(self):
-        return self._registered
-
-    @registered.setter
-    def registered(self, value):
-        self._playAsPlayer = value
-
     update_types = [
         (UpdateType.CLIENT_INFO,        UpdateFrequency.AUTOMATIC),
         (UpdateType.COMPANY_INFO,       UpdateFrequency.AUTOMATIC),
@@ -166,6 +164,6 @@ class SoapClient(TrackingAdminClient):
         (UpdateType.COMPANY_STATS,      UpdateFrequency.WEEKLY),
         (UpdateType.CHAT,               UpdateFrequency.AUTOMATIC),
         # (UpdateType.CONSOLE,            UpdateFrequency.AUTOMATIC),
-        # (UpdateType.LOGGING,            UpdateFrequency.AUTOMATIC),
+        (UpdateType.LOGGING,            UpdateFrequency.AUTOMATIC),
         (UpdateType.DATE,               UpdateFrequency.DAILY),
     ]
