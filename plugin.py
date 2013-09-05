@@ -38,7 +38,6 @@ from libottdadmin2.constants import *
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
 
-
 class Soap(callbacks.Plugin):
     """
     This plug-in allows supybot to interface to OpenTTD via its built-in
@@ -280,21 +279,19 @@ class Soap(callbacks.Plugin):
         try:
             with open(pidfilename) as pidfile:
                 pid = int(pidfile.readline())
-                ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
-                output = ps.stdout.read()
-                ps.stdout.close()
-                ps.wait()
-
-                for line in output.split('\n'):
-                    if line != '' and line != None:
-                        fields = line.split()
-                        pspid = fields[0]
-                        pspname = fields[3]
-                        if (pspid == pid) and (executable in pspname):
-                            self.log.info('server is running')
-                            return True
         except IOError:
             return False
+        ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
+        output = ps.stdout.read()
+        ps.stdout.close()
+        ps.wait()
+        for line in output.split('\n'):
+            if line != '' and line != None:
+                fields = line.split()
+                pspid = fields[0]
+                pspname = fields[3]
+                if (pspid == pid) and (executable in pspname):
+                    return True
         else:
             return False
 
@@ -312,36 +309,40 @@ class Soap(callbacks.Plugin):
             command.extend(['-D', '-f'])
             command.extend(parameters)
 
+            commandtext = ''
+            for item in command:
+                commandtext += item
+            self.log.info('executing: %s' % commandtext)
+
             try:
-                self.log.info(str(command))
                 game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
                 output = game.stdout.read()
                 game.stdout.close()
                 game.wait()
-                pid = None
-                for line in output.split('\n'):
-                    self.log.info(line)
-                    if 'Forked to background with pid' in line:
-                        words = line.split()
-                        pid = words[6]
-                        try:
-                            with open(pidfilename, 'w') as pidfile:
-                                pidfile.write(str(pid))
-                            return ServerStartStatus.SUCCESS
-                        except:
-                            self.log.info('pidfile error: %s' % sys.exc_info()[0])
-                            return ServerStartStatus.SUCCESSNOPIDFILE
-                if pid == None:
-                    return ServerStartStatus.FAILNOPID
-            except OSError as e:
-                self.log.info('encountered OSError: %s - %s' % (e.errno, e.strerror))
-                return ServerStartStatus.FAILOSERROR
-            except NameError as e:
-                self.log.info('encountered NameError: %s' % e)
-                return ServerStartStatus.FAILNAMEERROR
+            # except OSError as e:
+            #     self.log.info('encountered OSError: %s - %s' % (e.errno, e.strerror))
+            #     return ServerStartStatus.FAILOSERROR
+            # except NameError as e:
+            #     self.log.info('encountered NameError: %s' % e)
+            #     return ServerStartStatus.FAILNAMEERROR
             except Exception as e:
                 self.log.info('Except triggered: %s' % sys.exc_info()[0])
                 return ServerStartStatus.FAILUNKNOWN
+
+            pid = None
+            for line in output.split('\n'):
+                self.log.info('OpenTTD output: %s' % line)
+                if 'Forked to background with pid' in line:
+                    words = line.split()
+                    pid = words[6]
+                    try:
+                        with open(pidfilename, 'w') as pidfile:
+                            pidfile.write(str(pid))
+                    except:
+                        self.log.info('pidfile error: %s' % sys.exc_info()[0])
+                        return ServerStartStatus.SUCCESSNOPIDFILE
+                    return ServerStartStatus.SUCCESS
+            return ServerStartStatus.FAILNOPID
 
 
 
