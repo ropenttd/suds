@@ -26,9 +26,13 @@ import supybot.plugins as plugins
 import threading
 import time
 import socket
+import subprocess
+import sys
 from datetime import datetime
 
 from soapclient import SoapClient
+from enums import *
+
 from libottdadmin2.trackingclient import poll, POLLIN, POLLOUT, POLLERR, POLLHUP, POLLPRI, POLL_MOD
 from libottdadmin2.constants import *
 from libottdadmin2.enums import *
@@ -158,8 +162,9 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        text = 'Disconnected from %s' % (conn.serverinfo.name)
-        self._msgChannel(conn.irc, connChan, text)
+        if not conn.serverinfo.name == None:
+            text = 'Disconnected from %s' % (conn.serverinfo.name)
+            self._msgChannel(conn.irc, connChan, text)
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -267,6 +272,76 @@ class Soap(callbacks.Plugin):
                 self.connections[i] = newconn
                 break
         return newconn
+
+    def _checkIfRunning(self, gamedir):
+        pidfilename = gamedir + 'openttd.pid'
+        executable = 'openttd'
+
+        try:
+            with open(pidfilename) as pidfile:
+                pid = int(pidfile.readline())
+                ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
+                output = ps.stdout.read()
+                ps.stdout.close()
+                ps.wait()
+
+                for line in output.split('\n'):
+                    if line != '' and line != None:
+                        fields = line.split()
+                        pspid = fields[0]
+                        pspname = fields[3]
+                        if (pspid == pid) and (executable in pspname):
+                            self.log.info('server is running')
+                            return True
+        except IOError:
+            return False
+        else:
+            return False
+
+    def _startserver(self, gamedir, parameters):
+        running = self._checkIfRunning(gamedir)
+
+        if running:
+            return ServerStartStatus.ALREADYRUNNING
+        else:
+            self.log.info(str(parameters))
+            pidfilename = gamedir + 'openttd.pid'
+            executable = gamedir + 'openttd'
+            command = []
+            command.append(executable)
+            command.extend(['-D', '-f'])
+            command.extend(parameters)
+
+            try:
+                self.log.info(str(command))
+                game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
+                output = game.stdout.read()
+                game.stdout.close()
+                game.wait()
+                pid = None
+                for line in output.split('\n'):
+                    self.log.info(line)
+                    if 'Forked to background with pid' in line:
+                        words = line.split()
+                        pid = words[6]
+                        try:
+                            with open(pidfilename, 'w') as pidfile:
+                                pidfile.write(str(pid))
+                            return ServerStartStatus.SUCCESS
+                        except:
+                            self.log.info('pidfile error: %s' % sys.exc_info()[0])
+                            return ServerStartStatus.SUCCESSNOPIDFILE
+                if pid == None:
+                    return ServerStartStatus.FAILNOPID
+            except OSError as e:
+                self.log.info('encountered OSError: %s - %s' % (e.errno, e.strerror))
+                return ServerStartStatus.FAILOSERROR
+            except NameError as e:
+                self.log.info('encountered NameError: %s' % e)
+                return ServerStartStatus.FAILNAMEERROR
+            except Exception as e:
+                self.log.info('Except triggered: %s' % sys.exc_info()[0])
+                return ServerStartStatus.FAILUNKNOWN
 
 
 
@@ -525,8 +600,9 @@ class Soap(callbacks.Plugin):
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
+        allowOps = self.registryValue('allowOps', conn.channel)
 
-        if self._checkPermission(irc, msg, conn.channel, conn.allowOps):
+        if self._checkPermission(irc, msg, conn.channel, allowOps):
             if not conn.is_connected:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
@@ -601,7 +677,6 @@ class Soap(callbacks.Plugin):
     unpause = wrap(unpause, [optional('text')])
 
     def ding(self, irc, msg, args, serverID):
-
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
         if conn == None:
             return
@@ -642,6 +717,38 @@ class Soap(callbacks.Plugin):
             destType = DestType.BROADCAST,
             clientID = ClientID.SERVER,
             message = message)
+
+
+
+    # Local-type only commands
+
+    def start(self, irc, msg, args, serverID):
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if conn == None:
+            return
+        if conn.is_connected:
+            irc.reply('I am connected to %s, so it\'s safe to assume that its already running' % conn.serverinfo.name,
+                prefixNick = False)
+            return
+        if not self.registryValue('local', conn.channel):
+            irc.reply('Sorry, this server is not set up as local', prefixNick = False)
+            return
+
+        gamedir = self.registryValue('gamedir', conn.channel)
+        parameters = self.registryValue('parameters', conn.channel)
+        result = self._startserver(gamedir, parameters)
+
+        if result == ServerStartStatus.ALREADYRUNNING:
+            text = 'Server already running. Try apconnect instead'
+        elif result == ServerStartStatus.SUCCESS:
+            text = 'Server started succesfully'
+        elif result == ServerStartStatus.SUCCESSNOPIDFILE:
+            text = 'Server started succesfully, but could not write pidfile'
+        elif (result == ServerStartStatus.FAILNOPID or result == ServerStartStatus.FAILNAMEERROR
+        or result == ServerStartStatus.FAILOSERROR or result == ServerStartStatus.FAILUNKNOWN):
+            text = 'Server didn\'t start.'
+        irc.reply(text, prefixNick = False)
+    start = wrap(start, [optional('text')])
 
 Class = Soap
 
