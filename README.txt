@@ -8,7 +8,7 @@ IRC: I can usually be found in #openttd on OFTC
 
 
 Prerequisites:
- * Openttd server
+ * working OpenTTD server
  * Supybot set up in a channel
  * libottdadmin2 by Xaroth installed
 
@@ -16,15 +16,8 @@ Prerequisites:
  recommend you download it and play some at www.openttd.org. Come back when you
  are running a dedicated server which you want to administer from irc.
 
- Supybot comes with its own installation instructions and user manual and can be
- found here: http://sourceforge.net/projects/supybot/
-
-
-
-Installation and configuration
-
- To install Soap, simply copy the Soap directory into the bots plugin directory,
- and load the plugin once the bot is running.
+ Supybot comes with its own installation instructions. Those and its user manual
+ can be found here: http://sourceforge.net/projects/supybot/
 
 
 
@@ -42,6 +35,13 @@ Installing libottdadmin2:
  <PathToPlugins>/Soap/libottdadmin2/client.py
  This will give the same functionality, but only for the Soap plugin. On the
  upside, no sudo access required.
+
+
+
+Installation
+
+ To install Soap, simply copy the Soap directory into the bots plugin directory,
+ and load the plugin once the bot is running.
 
 
 
@@ -78,21 +78,27 @@ Configuration
  channels. This is a global value, so theres only one variation:
     config supybot.plugins.Soap.channels #mychannel #myotherchannel ...
 
- That will enable below commands for servers tied to those channels. If you
- didn't specify any settings for a channel, it will pick the default setting instead.
+ That will enable below commands for servers tied to those channels. Changing this
+ setting will require reloading the plugin so that it can set up all the connections
+
+ If you didn't specify any settings for a channel, it will pick the default setting instead.
+ This also means, that if you want one setting to apply to all the servers (eg you run
+ all on a non-standard adminport), simply change the option as if it were a global
+ setting.
 
  For a description of the individual variables, open config.py with a text editor.
 
 
 
 Commands:
- apconnect(*)       - connects to the preconfigured openttd server(*)
- apdisconnect(*)    - disconnects from same
- pause(*)           - manually pauses the game
- unpause(*)         - manually unpauses the game (sets min_active_clients to 0)
- auto(*)            - turns on autopause, and re-sets min_active_clients to the
+ apconnect*         - connects to the preconfigured openttd server(*)
+ apdisconnect*      - disconnects from same
+ pause*             - manually pauses the game
+ unpause*           - manually unpauses the game (sets min_active_clients to 0)
+ auto*              - turns on autopause, and re-sets min_active_clients to the
                        configured amount
- rcon(*)            - sends an rcon command to the server
+ rcon*              - sends an rcon command to the server
+ start*^            - starts OpenTTD dedicated server
  clients            - lists the clients connected to the server
  companies          - lists companies
  date               - returns the ingame date
@@ -101,14 +107,15 @@ Commands:
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
  private message.
- Commands marked with (*) require being opped or trusted (depending on allowOps).
+ Commands marked with * require being opped or trusted (depending on allowOps).
+ Commands marked with ^ only work if the server's local setting is True.
 
 
 
 Todo:
  screenshots
  password rotation
- file-based stuff (updating/starting openttd etc)
+ file-based stuff (updating openttd etc)
 
 
 
