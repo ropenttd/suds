@@ -46,7 +46,7 @@ class SoapEvents(object):
 
         self.chat           = Event()
         self.rcon           = Event()
-        # self.console        = Event()
+        self.console        = Event()
 
         self.pong           = Event()
 
@@ -76,6 +76,7 @@ class SoapClient(TrackingAdminClient):
         self.events.chat            += self._rcvChat
         self.events.rcon            += self._rcvRcon
         self.events.rconend         += self._rcvRconEnd
+        self.events.console         += self._rcvConsole
 
         self.events.pong            += self._rcvPong
 
@@ -123,12 +124,12 @@ class SoapClient(TrackingAdminClient):
     def _rcvPong(self, start, end, delta):
         self.soapEvents.pong(self._channel, start, end, delta)
 
+    def _rcvConsole(self, message, origin):
+        self.soapEvents.console(self._channel, origin, message)
 
     # Store some extra info
 
-    _settable_args = TrackingAdminClient._settable_args + [
-        'irc', 'ID', 'channel', 'autoConnect', 'allowOps',
-        'playAsPlayer', 'polling']
+    _settable_args = TrackingAdminClient._settable_args + ['irc', 'ID', 'channel']
     _irc = None
     _ID = 'Default'
     _channel = None
@@ -163,7 +164,7 @@ class SoapClient(TrackingAdminClient):
         (UpdateType.COMPANY_ECONOMY,    UpdateFrequency.WEEKLY),
         (UpdateType.COMPANY_STATS,      UpdateFrequency.WEEKLY),
         (UpdateType.CHAT,               UpdateFrequency.AUTOMATIC),
-        # (UpdateType.CONSOLE,            UpdateFrequency.AUTOMATIC),
+        (UpdateType.CONSOLE,            UpdateFrequency.AUTOMATIC),
         (UpdateType.LOGGING,            UpdateFrequency.AUTOMATIC),
         (UpdateType.DATE,               UpdateFrequency.DAILY),
     ]
