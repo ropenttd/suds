@@ -414,13 +414,13 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        if message.startswith('Game Load Failed'):
+        if message.startswith('Game Load Failed') or message.startswith('ERROR: Game Load Failed'):
             ircMessage = message.replace("\n", ", ")
+            ircMessage = ircMessage.replace("?", ", ")
             self._msgChannel(irc, conn.channel, ircMessage)
         else:
             ircMessage = message[3:]
             if ircMessage.startswith('***'):
-                self.log.info(ircMessage)
                 self._msgChannel(irc, conn.channel, ircMessage)
 
 
