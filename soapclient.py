@@ -24,8 +24,8 @@ class SoapEvents(object):
         self.connected      = Event()
         self.disconnected   = Event()
 
-        # self.shutdown       = Event()
-        # self.new_game       = Event()
+        self.shutdown       = Event()
+        self.new_game       = Event()
 
         self.new_map        = Event()
         # self.protocol       = Event()
@@ -67,6 +67,9 @@ class SoapClient(TrackingAdminClient):
         self.events.connected       += self._rcvConnected
         self.events.disconnected    += self._rcvDisconnected
 
+        self.events.shutdown        += self._rcvShutdown
+        self.events.new_game        += self._rcvNewGame
+
         self.events.new_map         += self._rcvNewMap
 
         self.events.chat            += self._rcvChat
@@ -94,6 +97,12 @@ class SoapClient(TrackingAdminClient):
         self.registered = False
         self.soapEvents.disconnected(self._channel, canRetry)
 
+    def _rcvShutdown(self):
+        self.soapEvents.shutdown(self._channel)
+
+    def _rcvNewGame(self):
+        self.soapEvents.new_game(self._channel)
+
     def _rcvNewMap(self, mapinfo, serverinfo):
         self.soapEvents.new_map(self._channel, mapinfo, serverinfo)
 
@@ -113,6 +122,8 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvConsole(self, message, origin):
         self.soapEvents.console(self._channel, origin, message)
+
+
 
     # Store some extra info
 

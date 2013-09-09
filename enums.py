@@ -21,6 +21,5 @@ class ServerStartStatus(EnumHelper):
     SUCCESS             = 0x01 # Server started succesfully
     SUCCESSNOPIDFILE    = 0x02 # Server started succesfully, but no pidfile was created
     FAILNOPID           = 0x03 # Server may not have started properly, couldn't catch the PID
-    FAILNAMEERROR       = 0x04 # Server failed to start
-    FAILOSERROR         = 0x05 # Server failed to start
-    FAILUNKNOWN         = 0x06 # Server failed to start, unhandled error
+    FAILOSERROR         = 0x04 # Server failed to start
+    FAILUNKNOWN         = 0x05 # Server failed to start, unhandled error

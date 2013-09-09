@@ -82,9 +82,8 @@ class Soap(callbacks.Plugin):
                         if packet == None:
                             polList.remove(fileno)
                             self._disconnect(conn, True)
-                        else:
-                            self.log.info('%s - %s' % (conn.ID, packet))
-                            pass
+                        # else:
+                        #     self.log.info('%s - %s' % (conn.ID, packet))
                     elif (event & POLLERR) or (event & POLLHUP):
                         polList.remove(fileno)
                         self._disconnect(conn, True)
@@ -123,6 +122,9 @@ class Soap(callbacks.Plugin):
     def _attachEvents(self, conn):
         conn.soapEvents.connected       += self._connected
         conn.soapEvents.disconnected    += self._disconnected
+
+        conn.soapEvents.shutdown        += self._rcvShutdown
+        conn.soapEvents.new_game        += self._rcvNewGame
 
         conn.soapEvents.new_map         += self._rcvNewMap
 
@@ -299,7 +301,6 @@ class Soap(callbacks.Plugin):
         if running:
             return ServerStartStatus.ALREADYRUNNING
         else:
-            self.log.info(str(parameters))
             pidfilename = gamedir + 'openttd.pid'
             executable = gamedir + 'openttd'
             command = []
@@ -317,12 +318,8 @@ class Soap(callbacks.Plugin):
                 output = game.stdout.read()
                 game.stdout.close()
                 game.wait()
-            # except OSError as e:
-            #     self.log.info('encountered OSError: %s - %s' % (e.errno, e.strerror))
-            #     return ServerStartStatus.FAILOSERROR
-            # except NameError as e:
-            #     self.log.info('encountered NameError: %s' % e)
-            #     return ServerStartStatus.FAILNAMEERROR
+            except OSError as e:
+                return ServerStartStatus.FAILOSERROR
             except Exception as e:
                 self.log.info('Except triggered: %s' % sys.exc_info()[0])
                 return ServerStartStatus.FAILUNKNOWN
@@ -346,6 +343,24 @@ class Soap(callbacks.Plugin):
 
     # Packet Handlers
 
+    def _rcvShutdown(self, connChan):
+        conn = self._getConnectionFromChannel(connChan)
+        if not conn:
+            return
+        irc = conn.irc
+
+        text = 'Server Shutting down'
+        self._msgChannel(irc, conn.channel, text)
+
+    def _rcvNewGame(self, connChan):
+        conn = self._getConnectionFromChannel(connChan)
+        if not conn:
+            return
+        irc = conn.irc
+
+        text = 'Starting new game'
+        self._msgChannel(irc, conn.channel, text)
+
     def _rcvNewMap(self, connChan, mapinfo, serverinfo):
         conn = self._getConnectionFromChannel(connChan)
         if not conn:
@@ -362,16 +377,8 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         clientName = str(clientID)
-        clientCompany = None
         if client != clientID:
             clientName = client.name
-            clientCompany = conn.companies.get(client.play_as)
-        if clientCompany:
-            companyName = clientCompany.name
-            companyID = clientCompany.id + 1
-        else:
-            companyName = 'Unknown'
-            companyID = '?'
         playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
 
         if action == Action.CHAT:
@@ -719,9 +726,12 @@ class Soap(callbacks.Plugin):
             text = 'Server started succesfully'
         elif result == ServerStartStatus.SUCCESSNOPIDFILE:
             text = 'Server started succesfully, but could not write pidfile'
-        elif (result == ServerStartStatus.FAILNOPID or result == ServerStartStatus.FAILNAMEERROR
-        or result == ServerStartStatus.FAILOSERROR or result == ServerStartStatus.FAILUNKNOWN):
-            text = 'Server didn\'t start.'
+        elif result == ServerStartStatus.FAILOSERROR:
+            text = 'Server failed to start, couldn\'t find the executable'
+        elif result == ServerStartStatus.FAILNOPID:
+            text = 'Server may not have started correctly, unable to catch the PID'
+        elif result == ServerStartStatus.FAILUNKNOWN:
+            text = 'Server failed to start, I\'m not sure what went wrong'
         irc.reply(text, prefixNick = False)
     start = wrap(start, [optional('text')])
 
