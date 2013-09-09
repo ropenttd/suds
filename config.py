@@ -50,6 +50,24 @@ conf.registerChannelValue(Soap, 'port',
 conf.registerChannelValue(Soap, 'password',
     registry.String('password', """ The password as set in openttd.cfg """))
 
+# File-related settings
+conf.registerChannelValue(Soap, 'local',
+    registry.Boolean(False, """ Setting this to False will disable any commands
+    requiring the below mentioned configuration options, like start and update.
+    If you want this functionality, set this to True. You will need to make
+    sure the bot has rwx rights on the directories, and there is a working
+    install to begin with """))
+conf.registerChannelValue(Soap, 'gamedir',
+    registry.String('', """ The directory where the OpenTTD executable
+        can be found """))
+conf.registerChannelValue(Soap, 'tempdir',
+    registry.String('~/tmp/', """ Temporary directory, currently used only to
+    store downloaded files. This directory must exist. """))
+conf.registerChannelValue(Soap, 'parameters',
+    registry.SpaceSeparatedListOfStrings('', """ Any command line parameters
+    for OpenTTD. '-D -f' are given, and do not need to be included here"""))
+
+
 # Miscellanious server-specific settings
 conf.registerChannelValue(Soap, 'autoConnect',
     registry.Boolean(False, """ Setting this to True will cause the bot to
