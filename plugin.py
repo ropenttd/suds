@@ -108,7 +108,7 @@ class Soap(callbacks.Plugin):
         channel = msg.args[0].lower()
         conn = None
         if msg.nick == irc.nick and self.channels.count(channel) >=1:
-            conn = self.connections.get(channel) # self._getConnectionFromChannel(channel)
+            conn = self.connections.get(channel)
             if conn == None:
                 return
             if conn.is_connected:
@@ -145,7 +145,7 @@ class Soap(callbacks.Plugin):
             self._msgChannel(irc, conn.channel, text)
 
     def _disconnected(self, connChan, canRetry):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -212,10 +212,10 @@ class Soap(callbacks.Plugin):
 
         if serverID == None:
             if ircutils.isChannel(source) and source in self.channels:
-                conn = self.connections.get(source) # self._getConnectionFromChannel(source)
+                conn = self.connections.get(source)
         else:
             if ircutils.isChannel(serverID):
-                conn = self.connections.get(serverID) # self._getConnectionFromChannel(serverID)
+                conn = self.connections.get(serverID)
             else:
                 for c in self.connections.itervalues():
                     if c.ID.lower() == serverID.lower():
@@ -315,7 +315,7 @@ class Soap(callbacks.Plugin):
     # Packet Handlers
 
     def _rcvShutdown(self, connChan):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -324,7 +324,7 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.channel, text)
 
     def _rcvNewGame(self, connChan):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -333,7 +333,7 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.channel, text)
 
     def _rcvNewMap(self, connChan, mapinfo, serverinfo):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -342,7 +342,7 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.channel, text)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -361,7 +361,7 @@ class Soap(callbacks.Plugin):
                 self._moveToSpectators(irc, conn, client)
 
     def _rcvRcon(self, connChan, result, colour):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         if conn.rcon == 'Silent':
@@ -371,7 +371,7 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.rcon, result)
 
     def _rcvPong(self, connChan, start, end, delta):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -380,7 +380,7 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.channel, text)
 
     def _rcvConsole(self, connChan, origin, message):
-        conn = self.connections.get(connChan) # self._getConnectionFromChannel(connChan)
+        conn = self.connections.get(connChan)
         if conn == None:
             return
         irc = conn.irc
@@ -692,7 +692,7 @@ class Soap(callbacks.Plugin):
         conn = None
         source = source.lower()
         if irc.isChannel(source) and source in self.channels:
-            conn = self.connections.get(source) # self._getConnectionFromChannel(source)
+            conn = self.connections.get(source)
         if conn == None:
             return
         if not conn.is_connected:
