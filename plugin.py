@@ -63,29 +63,41 @@ class Soap(callbacks.Plugin):
         self.pollingThread.daemon = True
         self.pollingThread.start()
 
+    def _getConnectionFromFileno(self, connID):
+        for conn in self.connections:
+            if conn.fileno() == connID:
+                return conn
+        return None
+
     def _pollThread(self):
         timeout = 1.0
 
         while True:
-            polList = []
+            polList = {}
             for conn in self.connections:
                 if conn.is_connected and conn.registered:
-                    polList.append(conn.fileno())
+                    polList[conn.fileno()] = conn
             if len(polList) >= 1:
                 events = self._pollObj.poll(timeout * POLL_MOD)
                 for fileno, event in events:
-                    if polList.count(fileno) == 0:
+                    if not fileno in polList:
                         continue
-                    conn = self._getConnectionFromFileno(fileno)
+                    conn = polList.get(fileno)
                     if (event & POLLIN) or (event & POLLPRI):
                         packet = conn.recv_packet()
                         if packet == None:
-                            polList.remove(fileno)
+                            try:
+                                del polList[fileno]
+                            except KeyError:
+                                pass
                             self._disconnect(conn, True)
                         # else:
                         #     self.log.info('%s - %s' % (conn.ID, packet))
                     elif (event & POLLERR) or (event & POLLHUP):
-                        polList.remove(fileno)
+                        try:
+                            del polList[fileno]
+                        except KeyError:
+                            pass
                         self._disconnect(conn, True)
                 else:
                     time.sleep(0.1)
@@ -595,10 +607,52 @@ class Soap(callbacks.Plugin):
                 message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
                 irc.reply(message, prefixNick = False)
                 return
-            else:
-                conn.rcon = source
-                conn.send_packet(AdminRcon, command = command)
+            conn.rcon = source
+            self.log.info('rcon command: %s' % command)
+            conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
+
+    def content(self, irc, msg, args, command):
+        """ [Server ID or channel] <content command>
+
+        sends a rcon content command to the [specified] openttd server
+        """
+
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        serverID = None
+        firstWord = command.partition(' ')[0]
+        conns = []
+        for c in self.connections:
+            conns.append(c.channel)
+            conns.append(c.ID)
+        if firstWord in conns:
+            serverID = firstWord
+            command = command.partition(' ')[2]
+
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+        allowOps = self.registryValue('allowOps', conn.channel)
+
+        command = 'content ' + command
+        if self._checkPermission(irc, msg, conn.channel, allowOps):
+            if not conn.is_connected:
+                irc.reply('Not connected!!', prefixNick = False)
+                return
+            if conn.rcon != 'Silent':
+                message = 'Sorry, still processing previous rcon command'
+                irc.reply(message, prefixNick = False)
+                return
+            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
+                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
+                irc.reply(message, prefixNick = False)
+                return
+            conn.rcon = source
+            self.log.info('rcon command: %s' % command)
+            conn.send_packet(AdminRcon, command = command)
+    content = wrap(content, ['text'])
 
     def pause(self, irc, msg, args, serverID):
         """ [Server ID or channel]
