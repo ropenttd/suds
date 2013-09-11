@@ -122,3 +122,4 @@ Todo:
 Credits:
  Taede Werkhoven: For writing the plugin
  Xaroth: For writing libottdadmin2, which also served as an example for Soap
+ Dihedral: generated passwords.txt from OpenTTD source
