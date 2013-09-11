@@ -23,11 +23,14 @@ import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 import supybot.plugins as plugins
 
-import threading
-import time
+import os
+import random
 import socket
 import subprocess
 import sys
+import threading
+import time
+
 from datetime import datetime
 
 from soapclient import SoapClient
@@ -95,6 +98,23 @@ class Soap(callbacks.Plugin):
             if self.stopPoll.isSet():
                 break
 
+    def _passwordThread(self, conn, interval):
+        pluginDir = os.path.dirname(__file__)
+        pwFileName = os.path.join(pluginDir, 'passwords.txt')
+
+        while True:
+            newPassword = random.choice(list(open(pwFileName)))
+            newPassword = newPassword.strip()
+            command = 'set server_password %s' % newPassword
+            if conn.is_connected:
+                if conn.rcon == 'Silent':
+                    conn.send_packet(AdminRcon, command = command)
+                    conn.clientPassword = newPassword.lower()
+                    self.log.info('changed password for %s to %s' % (conn.ID, conn.clientPassword))
+            else:
+                break
+            time.sleep(interval)
+
     def die(self):
         for conn in self.connections.itervalues():
             try:
@@ -120,6 +140,7 @@ class Soap(callbacks.Plugin):
     # Connection management
 
     def _attachEvents(self, conn):
+        conn.soapEvents.connected       += self._connected
         conn.soapEvents.disconnected    += self._disconnected
 
         conn.soapEvents.shutdown        += self._rcvShutdown
@@ -143,6 +164,18 @@ class Soap(callbacks.Plugin):
         if not conn.connect():
             text = 'Failed to connect'
             self._msgChannel(irc, conn.channel, text)
+
+    def _connected(self, connChan):
+        conn = self.connections.get(connChan)
+        if conn == None:
+            return
+
+        pwInterval = self.registryValue('passwordInterval', connChan)
+        if pwInterval != 0:
+            pwThread = threading.Thread(target = self._passwordThread, args = [conn, pwInterval])
+            pwThread.daemon = True
+            pwThread.start()
+
 
     def _disconnected(self, connChan, canRetry):
         conn = self.connections.get(connChan)
@@ -682,6 +715,24 @@ class Soap(callbacks.Plugin):
         conn.ping()
     ding = wrap(ding, [optional('text')])
 
+    def password(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        tells you the current password needed for joining the [specified] game server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.clientPassword == None:
+            irc.reply('Free entry, no passwords needed')
+        else:
+            irc.reply(conn.clientPassword)
+    password = wrap(password, [optional('text')])
 
 
     # Relay IRC back ingame

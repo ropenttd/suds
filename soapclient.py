@@ -62,6 +62,7 @@ class SoapClient(TrackingAdminClient):
         self._attachEvents()
         self.rcon = 'Silent'
         self.registered = False
+        self.clientPassword = None
 
     def _attachEvents(self):
         self.events.connected       += self._rcvConnected

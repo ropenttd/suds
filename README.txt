@@ -103,6 +103,7 @@ Commands:
  companies          - lists companies
  date               - returns the ingame date
  ding               - should be ping, but that command was taken. Dings the server
+ password           - shows the current password needed to join the server
 
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
@@ -114,7 +115,6 @@ Commands:
 
 Todo:
  screenshots
- password rotation
  file-based stuff (updating openttd etc)
 
 

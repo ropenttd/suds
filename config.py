@@ -83,5 +83,11 @@ conf.registerChannelValue(Soap, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
     name. False will get them moved to spectators any time they try to join a
     company """))
+conf.registerChannelValue(Soap, 'passwordInterval',
+    registry.Integer(0, """ Interval in seconds between soap changing the
+    password clients use to join the server. Picks a random line from the
+    included passwords.txt. If you don't want your server to have random
+    passwords, leave this set at 0. People can use the password command to find
+    the current password """))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
