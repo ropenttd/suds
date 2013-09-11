@@ -111,7 +111,6 @@ class Soap(callbacks.Plugin):
                 if conn.rcon == 'Silent':
                     conn.send_packet(AdminRcon, command = command)
                     conn.clientPassword = newPassword
-                    self.log.info('changed password for %s to %s' % (conn.ID, conn.clientPassword))
             else:
                 break
             time.sleep(interval)
