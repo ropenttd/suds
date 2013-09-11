@@ -105,11 +105,12 @@ class Soap(callbacks.Plugin):
         while True:
             newPassword = random.choice(list(open(pwFileName)))
             newPassword = newPassword.strip()
+            newPassword = newPassword.lower()
             command = 'set server_password %s' % newPassword
             if conn.is_connected:
                 if conn.rcon == 'Silent':
                     conn.send_packet(AdminRcon, command = command)
-                    conn.clientPassword = newPassword.lower()
+                    conn.clientPassword = newPassword
                     self.log.info('changed password for %s to %s' % (conn.ID, conn.clientPassword))
             else:
                 break
@@ -575,7 +576,7 @@ class Soap(callbacks.Plugin):
         serverID = None
         firstWord = command.partition(' ')[0]
         conns = []
-        for c in self.connections:
+        for c in self.connections.itervalues():
             conns.append(c.channel)
             conns.append(c.ID)
         if firstWord in conns:
@@ -616,7 +617,7 @@ class Soap(callbacks.Plugin):
         serverID = None
         firstWord = command.partition(' ')[0]
         conns = []
-        for c in self.connections:
+        for c in self.connections.itervalues():
             conns.append(c.channel)
             conns.append(c.ID)
         if firstWord in conns:
