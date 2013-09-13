@@ -276,6 +276,41 @@ class Soap(callbacks.Plugin):
         self.connections[conn.channel] = newconn
         return newconn
 
+    def _ircRcon(self, irc, msg, args, command):
+        source = msg.args[0].lower()
+        if source == irc.nick.lower():
+            source = msg.nick
+        serverID = None
+        firstWord = command.partition(' ')[0]
+        conns = []
+        for c in self.connections.itervalues():
+            conns.append(c.channel)
+            conns.append(c.ID)
+        if firstWord in conns:
+            serverID = firstWord
+            command = command.partition(' ')[2]
+
+        conn = self._getConnection(source, serverID)
+        if conn == None:
+            return
+        allowOps = self.registryValue('allowOps', conn.channel)
+
+        if self._checkPermission(irc, msg, conn.channel, allowOps):
+            if not conn.is_connected:
+                irc.reply('Not connected!!', prefixNick = False)
+                return
+            if conn.rcon != 'Silent':
+                message = 'Sorry, still processing previous rcon command'
+                irc.reply(message, prefixNick = False)
+                return
+            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
+                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
+                irc.reply(message, prefixNick = False)
+                return
+            conn.rcon = source
+            self.log.info('rcon command: %s' % command)
+            conn.send_packet(AdminRcon, command = command)
+
     def _checkIfRunning(self, gamedir):
         pidfilename = gamedir + 'openttd.pid'
         executable = 'openttd'
@@ -569,39 +604,7 @@ class Soap(callbacks.Plugin):
         sends a rcon command to the [specified] openttd server
         """
 
-        source = msg.args[0].lower()
-        if source == irc.nick.lower():
-            source = msg.nick
-        serverID = None
-        firstWord = command.partition(' ')[0]
-        conns = []
-        for c in self.connections.itervalues():
-            conns.append(c.channel)
-            conns.append(c.ID)
-        if firstWord in conns:
-            serverID = firstWord
-            command = command.partition(' ')[2]
-
-        conn = self._getConnection(source, serverID)
-        if conn == None:
-            return
-        allowOps = self.registryValue('allowOps', conn.channel)
-
-        if self._checkPermission(irc, msg, conn.channel, allowOps):
-            if not conn.is_connected:
-                irc.reply('Not connected!!', prefixNick = False)
-                return
-            if conn.rcon != 'Silent':
-                message = 'Sorry, still processing previous rcon command'
-                irc.reply(message, prefixNick = False)
-                return
-            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
-                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
-                irc.reply(message, prefixNick = False)
-                return
-            conn.rcon = source
-            self.log.info('rcon command: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+        self._ircRcon(irc, msg, args, command)
     rcon = wrap(rcon, ['text'])
 
     def content(self, irc, msg, args, command):
@@ -610,40 +613,8 @@ class Soap(callbacks.Plugin):
         sends a rcon content command to the [specified] openttd server
         """
 
-        source = msg.args[0].lower()
-        if source == irc.nick.lower():
-            source = msg.nick
-        serverID = None
-        firstWord = command.partition(' ')[0]
-        conns = []
-        for c in self.connections.itervalues():
-            conns.append(c.channel)
-            conns.append(c.ID)
-        if firstWord in conns:
-            serverID = firstWord
-            command = command.partition(' ')[2]
-
-        conn = self._getConnection(source, serverID)
-        if conn == None:
-            return
-        allowOps = self.registryValue('allowOps', conn.channel)
-
         command = 'content ' + command
-        if self._checkPermission(irc, msg, conn.channel, allowOps):
-            if not conn.is_connected:
-                irc.reply('Not connected!!', prefixNick = False)
-                return
-            if conn.rcon != 'Silent':
-                message = 'Sorry, still processing previous rcon command'
-                irc.reply(message, prefixNick = False)
-                return
-            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
-                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
-                irc.reply(message, prefixNick = False)
-                return
-            conn.rcon = source
-            self.log.info('rcon command: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+        self._ircRcon(irc, msg, args, command)
     content = wrap(content, ['text'])
 
     def pause(self, irc, msg, args, serverID):
