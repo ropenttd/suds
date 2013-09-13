@@ -154,8 +154,7 @@ class Soap(callbacks.Plugin):
 
         conn.soapEvents.pong            += self._rcvPong
 
-    def _connectOTTD(self, irc, conn, source = None):
-        text = 'Connecting...'
+    def _connectOTTD(self, irc, conn, source = None, text = 'Connecting...'):
         self._msgChannel(irc, conn.channel, text)
         if source != conn.channel and source != None:
             self._msgChannel(irc, source, text)
@@ -187,6 +186,9 @@ class Soap(callbacks.Plugin):
             text = 'Disconnected from %s' % (conn.serverinfo.name)
             self._msgChannel(conn.irc, connChan, text)
             conn.serverinfo.name = None
+            if not conn.intentionalDisconnect:
+                text = 'Attempting to reconnect...'
+                _connectOTTD(irc, conn, text = text)
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -388,6 +390,7 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
+        conn.intentionalDisconnect = True
         text = 'Server Shutting down'
         self._msgChannel(irc, conn.channel, text)
 
@@ -500,6 +503,7 @@ class Soap(callbacks.Plugin):
             return
 
         if conn.is_connected:
+            conn.intentionalDisconnect = True
             self._disconnect(conn, False)
         else:
             irc.reply('Not connected!!', prefixNick = False)
