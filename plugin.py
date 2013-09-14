@@ -690,6 +690,15 @@ class Soap(callbacks.Plugin):
         conn.ping()
     ding = wrap(ding, [optional('text')])
 
+    def ip(self, irc, msg, args, serverID):
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if conn == None:
+            return
+
+        text = self.registryValue('publicAddress', conn.channel)
+        irc.reply(text)
+    ip = wrap(ip, [optional('text')])
+
     def password(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 

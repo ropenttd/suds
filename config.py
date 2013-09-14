@@ -49,6 +49,9 @@ conf.registerChannelValue(Soap, 'port',
     registry.Integer(3977, """ The port of the server's adminport """))
 conf.registerChannelValue(Soap, 'password',
     registry.String('password', """ The password as set in openttd.cfg """))
+conf.registerChannelValue(Soap, 'publicAddress',
+    registry.String('openttd.example.org', """ Address players use to connect
+    to the server """))
 
 # File-related settings
 conf.registerChannelValue(Soap, 'local',
