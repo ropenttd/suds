@@ -680,6 +680,11 @@ class Soap(callbacks.Plugin):
     unpause = wrap(unpause, [optional('text')])
 
     def ding(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Dings the [specified] server, normally called ping
+        """
+
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
         if conn == None:
             return
@@ -691,6 +696,11 @@ class Soap(callbacks.Plugin):
     ding = wrap(ding, [optional('text')])
 
     def ip(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Replies with the [specified] server's public address for players to connect to
+        """
+
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
         if conn == None:
             return
