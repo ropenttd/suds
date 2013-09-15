@@ -319,7 +319,7 @@ class Soap(callbacks.Plugin):
 
         try:
             with open(pidfilename) as pidfile:
-                pid = int(pidfile.readline())
+                pid = pidfile.readline()
         except IOError:
             return False
         ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
@@ -331,7 +331,7 @@ class Soap(callbacks.Plugin):
                 fields = line.split()
                 pspid = fields[0]
                 pspname = fields[3]
-                if (pspid == pid) and (executable in pspname):
+                if (pspid == pid) and (executable == pspname):
                     return True
         else:
             return False
