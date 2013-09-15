@@ -23,3 +23,7 @@ class ServerStartStatus(EnumHelper):
     FAILNOPID           = 0x03 # Server may not have started properly, couldn't catch the PID
     FAILOSERROR         = 0x04 # Server failed to start
     FAILUNKNOWN         = 0x05 # Server failed to start, unhandled error
+
+class RconSpecial(EnumHelper):
+    SILENT              = 0X01 # Keep it quiet, its a secret
+    SHUTDOWNSAVED       = 0x02 # game has been saved by the shutdown command

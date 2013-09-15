@@ -174,7 +174,10 @@ class Soap(callbacks.Plugin):
             pwThread = threading.Thread(target = self._passwordThread, args = [conn, pwInterval])
             pwThread.daemon = True
             pwThread.start()
-
+        else:
+            command = 'set server_password *'
+            conn.send_packet(AdminRcon, command = command)
+            conn.clientPassword = None
 
     def _disconnected(self, connChan, canRetry):
         conn = self.connections.get(connChan)
@@ -188,7 +191,7 @@ class Soap(callbacks.Plugin):
             conn.serverinfo.name = None
             if not conn.intentionalDisconnect:
                 text = 'Attempting to reconnect...'
-                _connectOTTD(irc, conn, text = text)
+                self._connectOTTD(irc, conn, text = text)
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -240,7 +243,7 @@ class Soap(callbacks.Plugin):
         elif self._checkPermission(irc, msg, conn.channel, allowOps):
             return (source, conn)
         else:
-            return (None, None)
+            return (None, 'Denied')
 
     def _getConnection(self, source, serverID = None):
         conn = None
@@ -295,13 +298,15 @@ class Soap(callbacks.Plugin):
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
+        elif conn == 'Denied':
+            irc.reply('')
         allowOps = self.registryValue('allowOps', conn.channel)
 
         if self._checkPermission(irc, msg, conn.channel, allowOps):
             if not conn.is_connected:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
-            if conn.rcon != 'Silent':
+            if conn.rcon != RconSpecial.SILENT:
                 message = 'Sorry, still processing previous rcon command'
                 irc.reply(message, prefixNick = False)
                 return
@@ -312,6 +317,18 @@ class Soap(callbacks.Plugin):
             conn.rcon = source
             self.log.info('rcon command: %s' % command)
             conn.send_packet(AdminRcon, command = command)
+
+    def _getLatestAutoSave(self, autosavedir):
+        max_mtime = 0
+        save = None
+        for fname in os.listdir(autosavedir):
+            if fname.startswith('autosave'):
+                fullpath = os.path.join(autosavedir, fname)
+                mtime = os.stat(fullpath).st_mtime
+                if mtime > max_mtime:
+                    max_mtime = mtime
+                    save = fullpath
+        return save
 
     def _checkIfRunning(self, gamedir):
         pidfilename = gamedir + 'openttd.pid'
@@ -341,44 +358,49 @@ class Soap(callbacks.Plugin):
 
         if running:
             return ServerStartStatus.ALREADYRUNNING
-        else:
-            pidfilename = gamedir + 'openttd.pid'
-            executable = gamedir + 'openttd'
-            command = []
-            command.append(executable)
-            command.extend(['-D', '-f'])
-            command.extend(parameters)
 
-            commandtext = ''
-            for item in command:
-                commandtext += item + ' '
-            self.log.info('executing: %s' % commandtext)
+        pidfilename = os.path.join(gamedir, 'openttd.pid')
+        executable = os.path.join(gamedir, 'openttd')
+        autosavedir = os.path.join(gamedir, 'save/autosave/')
+        lastsave = self._getLatestAutoSave(autosavedir)
 
-            try:
-                game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
-                output = game.stdout.read()
-                game.stdout.close()
-                game.wait()
-            except OSError as e:
-                return ServerStartStatus.FAILOSERROR
-            except Exception as e:
-                self.log.info('Except triggered: %s' % sys.exc_info()[0])
-                return ServerStartStatus.FAILUNKNOWN
+        command = []
+        command.append(executable)
+        command.extend(['-D', '-f'])
+        if not lastsave == None and os.path.isfile(lastsave):
+            command.extend(['-g', lastsave])
+        command.extend(parameters)
 
-            pid = None
-            for line in output.split('\n'):
-                self.log.info('OpenTTD output: %s' % line)
-                if 'Forked to background with pid' in line:
-                    words = line.split()
-                    pid = words[6]
-                    try:
-                        with open(pidfilename, 'w') as pidfile:
-                            pidfile.write(str(pid))
-                    except:
-                        self.log.info('pidfile error: %s' % sys.exc_info()[0])
-                        return ServerStartStatus.SUCCESSNOPIDFILE
-                    return ServerStartStatus.SUCCESS
-            return ServerStartStatus.FAILNOPID
+        commandtext = ''
+        for item in command:
+            commandtext += item + ' '
+        self.log.info('executing: %s' % commandtext)
+
+        try:
+            game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
+            output = game.stdout.read()
+            game.stdout.close()
+            game.wait()
+        except OSError as e:
+            return ServerStartStatus.FAILOSERROR
+        except Exception as e:
+            self.log.info('Except triggered: %s' % sys.exc_info()[0])
+            return ServerStartStatus.FAILUNKNOWN
+
+        pid = None
+        for line in output.split('\n'):
+            self.log.info('OpenTTD output: %s' % line)
+            if 'Forked to background with pid' in line:
+                words = line.split()
+                pid = words[6]
+                try:
+                    with open(pidfilename, 'w') as pidfile:
+                        pidfile.write(str(pid))
+                except:
+                    self.log.info('pidfile error: %s' % sys.exc_info()[0])
+                    return ServerStartStatus.SUCCESSNOPIDFILE
+                return ServerStartStatus.SUCCESS
+        return ServerStartStatus.FAILNOPID
 
 
 
@@ -433,12 +455,16 @@ class Soap(callbacks.Plugin):
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
-        if conn == None:
-            return
-        if conn.rcon == 'Silent':
+        if conn == None or conn.rcon == RconSpecial.SILENT:
             return
         irc = conn.irc
 
+        if conn.rcon == RconSpecial.SHUTDOWNSAVED:
+            if result.startswith('Map successfully saved'):
+                self._msgChannel(irc, conn.channel, result)
+                command = 'quit'
+                conn.send_packet(AdminRcon, command = command)
+            return
         self._msgChannel(irc, conn.rcon, result)
 
     def _rcvPong(self, connChan, start, end, delta):
@@ -620,6 +646,25 @@ class Soap(callbacks.Plugin):
         command = 'content ' + command
         self._ircRcon(irc, msg, args, command)
     content = wrap(content, ['text'])
+
+    def shutdown(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        pauses the [specified] game server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if conn == None:
+            return
+
+        if not conn.is_connected:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        conn.rcon = RconSpecial.SHUTDOWNSAVED
+        command = 'save autosave/autosavesoap'
+        conn.send_packet(AdminRcon, command = command)
+    shutdown = wrap(shutdown, [optional('text')])
 
     def pause(self, irc, msg, args, serverID):
         """ [Server ID or channel]
