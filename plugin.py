@@ -54,6 +54,7 @@ class Soap(callbacks.Plugin):
         self._pollObj = poll()
         self.channels = self.registryValue('channels')
         self.connections = {}
+        self.registeredConnections = {}
         for channel in self.channels:
             conn = SoapClient()
             self._attachEvents(conn)
@@ -70,25 +71,19 @@ class Soap(callbacks.Plugin):
         timeout = 1.0
 
         while True:
-            polList = {}
-            for conn in self.connections.itervalues():
-                if conn.is_connected and conn.registered:
-                    polList[conn.fileno()] = conn
-            if len(polList) >= 1:
+            if len(self.registeredConnections) >= 1:
                 events = self._pollObj.poll(timeout * POLL_MOD)
                 for fileno, event in events:
-                    if not fileno in polList:
+                    conn = self.registeredConnections.get(fileno)
+                    if conn == None:
                         continue
-                    conn = polList.get(fileno)
                     if (event & POLLIN) or (event & POLLPRI):
                         packet = conn.recv_packet()
                         if packet == None:
-                            del polList[fileno]
                             self._disconnect(conn, True)
                         # else:
                         #     self.log.info('%s - %s' % (conn.ID, packet))
                     elif (event & POLLERR) or (event & POLLHUP):
-                        del polList[fileno]
                         self._disconnect(conn, True)
                 else:
                     time.sleep(0.1)
@@ -118,7 +113,9 @@ class Soap(callbacks.Plugin):
     def die(self):
         for conn in self.connections.itervalues():
             try:
-                self._disconnect(conn, False)
+                if conn.is_connected:
+                    conn.intentionalDisconnect = True
+                    self._disconnect(conn, False)
             except NameError:
                 pass
         self.stopPoll.set()
@@ -185,13 +182,11 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        if not conn.serverinfo.name == None:
-            text = 'Disconnected from %s' % (conn.serverinfo.name)
-            self._msgChannel(conn.irc, connChan, text)
-            conn.serverinfo.name = None
-            if not conn.intentionalDisconnect:
-                text = 'Attempting to reconnect...'
-                self._connectOTTD(irc, conn, text = text)
+        text = 'Disconnected from %s' % (conn.serverinfo.name)
+        self._msgChannel(conn.irc, connChan, text)
+        if not conn.intentionalDisconnect:
+            text = 'Attempting to reconnect...'
+            self._connectOTTD(irc, conn, text = text)
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -203,11 +198,18 @@ class Soap(callbacks.Plugin):
             channel     = channel,
             name        = '%s-Soap' % irc.nick)
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
+        self.registeredConnections[conn.fileno()] = conn
 
     def _disconnect(self, conn, forced):
+        fileno = conn.fileno()
+
+        try:
+            del self.registeredConnections[conn.fileno()]
+        except KeyError:
+            pass
         try:
             self._pollObj.unregister(conn.fileno())
-        except:
+        except KeyError:
             pass
         if forced:
             conn.force_disconnect()
@@ -277,6 +279,12 @@ class Soap(callbacks.Plugin):
         self._msgChannel(irc, conn.channel, text)
 
     def _refreshConnection(self, conn):
+        try:
+            del self.registeredConnections[conn.fileno()]
+        except KeyError:
+            pass
+        except error:
+            pass
         newconn = conn.copy()
         self.connections[conn.channel] = newconn
         return newconn
@@ -298,8 +306,6 @@ class Soap(callbacks.Plugin):
         conn = self._getConnection(source, serverID)
         if conn == None:
             return
-        elif conn == 'Denied':
-            irc.reply('')
         allowOps = self.registryValue('allowOps', conn.channel)
 
         if self._checkPermission(irc, msg, conn.channel, allowOps):
@@ -662,7 +668,8 @@ class Soap(callbacks.Plugin):
             return
 
         conn.rcon = RconSpecial.SHUTDOWNSAVED
-        command = 'save autosave/autosavesoap'
+        autosave = os.path.join(gamedir, 'save/autosave/autosavesoap')
+        command = 'save %s' % autosave
         conn.send_packet(AdminRcon, command = command)
     shutdown = wrap(shutdown, [optional('text')])
 
