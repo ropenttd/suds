@@ -187,7 +187,16 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
         irc = conn.irc
+        fileno = conn.filenumber
 
+        try:
+            del self.registeredConnections[fileno]
+        except KeyError:
+            pass
+        try:
+            self._pollObj.unregister(fileno)
+        except KeyError:
+            pass
         text = 'Disconnected from %s' % (conn.serverinfo.name)
         self._msgChannel(conn.irc, connChan, text)
         if not conn.intentionalDisconnect:
@@ -208,15 +217,6 @@ class Soap(callbacks.Plugin):
         self.registeredConnections[conn.filenumber] = conn
 
     def _disconnect(self, conn, forced):
-        fileno = conn.filenumber
-        try:
-            del self.registeredConnections[fileno]
-        except KeyError:
-            pass
-        try:
-            self._pollObj.unregister(fileno)
-        except KeyError:
-            pass
         if forced:
             conn.force_disconnect()
         else:
