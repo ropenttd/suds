@@ -204,17 +204,17 @@ class Soap(callbacks.Plugin):
             channel     = channel,
             name        = '%s-Soap' % irc.nick)
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
-        self.registeredConnections[conn.fileno()] = conn
+        conn.filenumber = conn.fileno()
+        self.registeredConnections[conn.filenumber] = conn
 
     def _disconnect(self, conn, forced):
-        fileno = conn.fileno()
-
+        fileno = conn.filenumber
         try:
-            del self.registeredConnections[conn.fileno()]
+            del self.registeredConnections[fileno]
         except KeyError:
             pass
         try:
-            self._pollObj.unregister(conn.fileno())
+            self._pollObj.unregister(fileno)
         except KeyError:
             pass
         if forced:
@@ -286,8 +286,8 @@ class Soap(callbacks.Plugin):
 
     def _refreshConnection(self, conn):
         try:
-            del self.registeredConnections[conn.fileno()]
-        except (KeyError, StandardError):
+            del self.registeredConnections[conn.filenumber]
+        except KeyError:
             pass
         newconn = conn.copy()
         self.connections[conn.channel] = newconn
@@ -520,7 +520,7 @@ class Soap(callbacks.Plugin):
         else:
             # just in case an existing connection failed to de-register upon disconnect
             try:
-                self._pollObj.unregister(conn.fileno())
+                self._pollObj.unregister(conn.filenumber)
             except KeyError:
                 pass
             except IOError:
@@ -672,6 +672,7 @@ class Soap(callbacks.Plugin):
             return
 
         conn.rcon = RconSpecial.SHUTDOWNSAVED
+        gamedir = self.registryValue('gamedir', conn.channel)
         autosave = os.path.join(gamedir, 'save/autosave/autosavesoap')
         command = 'save %s' % autosave
         conn.send_packet(AdminRcon, command = command)
