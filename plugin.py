@@ -63,7 +63,7 @@ class Soap(callbacks.Plugin):
             if self.registryValue('autoConnect', channel):
                 self._connectOTTD(irc, conn, channel)
         self.stopPoll = threading.Event()
-        self.pollingThread = threading.Thread(target = self._pollThread)
+        self.pollingThread = threading.Thread(target = self._pollThread, name = 'SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
 
@@ -93,22 +93,28 @@ class Soap(callbacks.Plugin):
             if self.stopPoll.isSet():
                 break
 
-    def _passwordThread(self, conn, interval):
+    def _passwordThread(self, conn):
         pluginDir = os.path.dirname(__file__)
         pwFileName = os.path.join(pluginDir, 'passwords.txt')
 
         while True:
-            newPassword = random.choice(list(open(pwFileName)))
-            newPassword = newPassword.strip()
-            newPassword = newPassword.lower()
-            command = 'set server_password %s' % newPassword
-            if conn.is_connected:
-                if conn.rcon == 'Silent':
+            interval = self.registryValue('passwordInterval', conn.channel)
+            if not conn.is_connected:
+                break
+            if conn.rcon == RconSpecial.SILENT:
+                if interval > 0:
+                    newPassword = random.choice(list(open(pwFileName)))
+                    newPassword = newPassword.strip()
+                    newPassword = newPassword.lower()
+                    command = 'set server_password %s' % newPassword
                     conn.send_packet(AdminRcon, command = command)
                     conn.clientPassword = newPassword
-            else:
-                break
-            time.sleep(interval)
+                    time.sleep(interval)
+                else:
+                    command = 'set server_password *'
+                    conn.send_packet(AdminRcon, command = command)
+                    conn.clientPassword = None
+                    break
 
     def die(self):
         for conn in self.connections.itervalues():
@@ -168,7 +174,7 @@ class Soap(callbacks.Plugin):
 
         pwInterval = self.registryValue('passwordInterval', connChan)
         if pwInterval != 0:
-            pwThread = threading.Thread(target = self._passwordThread, args = [conn, pwInterval])
+            pwThread = threading.Thread(target = self._passwordThread, args = [conn])
             pwThread.daemon = True
             pwThread.start()
         else:

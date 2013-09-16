@@ -63,7 +63,7 @@ class SoapClient(TrackingAdminClient):
         self.soapEvents = SoapEvents()
         self._attachEvents()
 
-        self.rcon = 'Silent'
+        self.rcon = RconSpecial.SILENT
         self.registered = False
         self.clientPassword = None
         self.intentionalDisconnect = False
