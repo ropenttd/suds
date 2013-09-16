@@ -287,9 +287,7 @@ class Soap(callbacks.Plugin):
     def _refreshConnection(self, conn):
         try:
             del self.registeredConnections[conn.fileno()]
-        except KeyError:
-            pass
-        except error:
+        except (KeyError, StandardError):
             pass
         newconn = conn.copy()
         self.connections[conn.channel] = newconn
