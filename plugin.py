@@ -165,6 +165,7 @@ class Soap(callbacks.Plugin):
         self._initSoapClient(conn, irc, conn.channel)
         conn.connectionstate = ConnectionState.CONNECTING
         if not conn.connect():
+            conn.connectionstate = ConnectionState.DISCONNECTED
             text = 'Failed to connect'
             self._msgChannel(irc, conn.channel, text)
 
@@ -203,7 +204,8 @@ class Soap(callbacks.Plugin):
         if conn.serverinfo.name != None:
             text = 'Disconnected from %s' % (conn.serverinfo.name)
             self._msgChannel(conn.irc, connChan, text)
-        if conn.connectionstate == ConnectionState.CONNECTED or conn.connectionstate == ConnectionState.CONNECTING:
+            conn.serverinfo.name = None
+        if conn.connectionstate == ConnectionState.CONNECTED:
             # We didn't disconnect on purpose, set this so we will reconnect
             conn.connectionstate == ConnectionState.DISCONNECTED
             text = 'Attempting to reconnect...'
@@ -681,6 +683,7 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
 
+        irc.replu('Shutting down server...', prefixNick = False)
         conn.rcon = RconSpecial.SHUTDOWNSAVED
         gamedir = self.registryValue('gamedir', conn.channel)
         autosave = os.path.join(gamedir, 'save/autosave/autosavesoap')
@@ -840,6 +843,8 @@ class Soap(callbacks.Plugin):
         if not self.registryValue('local', conn.channel):
             irc.reply('Sorry, this server is not set up as local', prefixNick = False)
             return
+        text = 'Starting server...'
+        irc.reply(text, prefixNick = False)
 
         gamedir = self.registryValue('gamedir', conn.channel)
         parameters = self.registryValue('parameters', conn.channel)
