@@ -99,7 +99,7 @@ class Soap(callbacks.Plugin):
 
         while True:
             interval = self.registryValue('passwordInterval', conn.channel)
-            if not conn.is_connected:
+            if conn.connectionstate != ConnectionState.CONNECTED:
                 break
             if conn.rcon == RconSpecial.SILENT:
                 if interval > 0:
@@ -119,7 +119,7 @@ class Soap(callbacks.Plugin):
     def die(self):
         for conn in self.connections.itervalues():
             try:
-                if conn.is_connected:
+                if conn.connectionstate == ConnectionState.CONNECTED:
                     conn.connectionstate = ConnectionState.DISCONNECTING
                     self._disconnect(conn, False)
             except NameError:
@@ -134,7 +134,7 @@ class Soap(callbacks.Plugin):
             conn = self.connections.get(channel)
             if conn == None:
                 return
-            if conn.is_connected:
+            if conn.connectionstate == ConnectionState.CONNECTED:
                 text = 'Connected to %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
                 self._msgChannel(conn._irc, conn.channel, text)
 
@@ -324,7 +324,7 @@ class Soap(callbacks.Plugin):
         allowOps = self.registryValue('allowOps', conn.channel)
 
         if self._checkPermission(irc, msg, conn.channel, allowOps):
-            if not conn.is_connected:
+            if conn.connectionstate != ConnectionState.CONNECTED:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
             if conn.rcon != RconSpecial.SILENT:
@@ -467,8 +467,25 @@ class Soap(callbacks.Plugin):
         playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
 
         if action == Action.CHAT:
-            text = '<%s> %s' % (clientName, message)
-            self._msgChannel(irc, conn.channel, text)
+            if message.startswith('!admin'):
+                text = '%s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
+                self._msgChannel(irc, conn.channel, text)
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT,
+                    destType = DestType.BROADCAST,
+                    clientID = ClientID.SERVER,
+                    message = text)
+            elif message.startswith('!nick '):
+                newName = message.partition(' ')[2]
+                newName = newName.strip()
+                if len(newName) > 0:
+                    text = '*** %s has changed his/her name to %s' % (clientName, newName)
+                    self._msgChannel(irc, conn.channel, text)
+                    command = 'client_name %s %s' % (clientID, newName)
+                    conn.send_packet(AdminRcon, command = command)
+            else:
+                text = '<%s> %s' % (clientName, message)
+                self._msgChannel(irc, conn.channel, text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             clientName = clientName.lower()
             if clientName.startswith('player') and not playAsPlayer:
@@ -527,7 +544,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if conn.is_connected:
+        if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('Already connected!!', prefixNick = False)
         else:
             # just in case an existing connection failed to de-register upon disconnect
@@ -550,7 +567,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if conn.is_connected:
+        if conn.connectionstate == ConnectionState.CONNECTED:
             conn.connectionstate = ConnectionState.DISCONNECTING
             self._disconnect(conn, False)
         else:
@@ -567,7 +584,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         message = '%s' % conn.date.strftime('%b %d %Y')
@@ -584,7 +601,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         companies = False
@@ -625,7 +642,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         clients = False
@@ -679,11 +696,11 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
 
-        irc.replu('Shutting down server...', prefixNick = False)
+        irc.reply('Shutting down server...', prefixNick = False)
         conn.rcon = RconSpecial.SHUTDOWNSAVED
         gamedir = self.registryValue('gamedir', conn.channel)
         autosave = os.path.join(gamedir, 'save/autosave/autosavesoap')
@@ -701,7 +718,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         command = 'pause'
@@ -719,7 +736,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         minPlayers = self.registryValue('minPlayers', conn.channel)
@@ -740,7 +757,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         command = 'set min_active_clients 0'
@@ -759,7 +776,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         conn.ping()
@@ -789,7 +806,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         if conn.clientPassword == None:
@@ -810,7 +827,7 @@ class Soap(callbacks.Plugin):
             conn = self.connections.get(source)
         if conn == None:
             return
-        if not conn.is_connected:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             return
 
         actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
@@ -836,7 +853,7 @@ class Soap(callbacks.Plugin):
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
         if conn == None:
             return
-        if conn.is_connected:
+        if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('I am connected to %s, so it\'s safe to assume that its already running' % conn.serverinfo.name,
                 prefixNick = False)
             return
