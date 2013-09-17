@@ -584,7 +584,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if conn.connectionstate == ConnectionState.CONNECTED:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         message = '%s' % conn.date.strftime('%b %d %Y')
@@ -601,7 +601,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if conn.connectionstate == ConnectionState.CONNECTED:
+        if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
         companies = False
