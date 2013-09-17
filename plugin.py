@@ -120,7 +120,7 @@ class Soap(callbacks.Plugin):
         for conn in self.connections.itervalues():
             try:
                 if conn.is_connected:
-                    conn.intentionalDisconnect = True
+                    conn.connectionstate = ConnectionState.DISCONNECTING
                     self._disconnect(conn, False)
             except NameError:
                 pass
@@ -163,6 +163,7 @@ class Soap(callbacks.Plugin):
             self._msgChannel(irc, source, text)
         conn = self._refreshConnection(conn)
         self._initSoapClient(conn, irc, conn.channel)
+        conn.connectionstate = ConnectionState.CONNECTING
         if not conn.connect():
             text = 'Failed to connect'
             self._msgChannel(irc, conn.channel, text)
@@ -172,6 +173,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
+        conn.connectionstate = ConnectionState.CONNECTED
         pwInterval = self.registryValue('passwordInterval', connChan)
         if pwInterval != 0:
             pwThread = threading.Thread(target = self._passwordThread, args = [conn])
@@ -197,11 +199,17 @@ class Soap(callbacks.Plugin):
             self._pollObj.unregister(fileno)
         except KeyError:
             pass
-        text = 'Disconnected from %s' % (conn.serverinfo.name)
-        self._msgChannel(conn.irc, connChan, text)
-        if not conn.intentionalDisconnect:
+
+        if conn.serverinfo.name != None:
+            text = 'Disconnected from %s' % (conn.serverinfo.name)
+            self._msgChannel(conn.irc, connChan, text)
+        if conn.connectionstate == ConnectionState.CONNECTED or conn.connectionstate == ConnectionState.CONNECTING:
+            # We didn't disconnect on purpose, set this so we will reconnect
+            conn.connectionstate == ConnectionState.DISCONNECTED
             text = 'Attempting to reconnect...'
             self._connectOTTD(irc, conn, text = text)
+        else:
+            conn.connectionstate = ConnectionState.DISCONNECTED
 
     def _initSoapClient(self, conn, irc, channel):
         conn.configure(
@@ -243,6 +251,7 @@ class Soap(callbacks.Plugin):
             source = msg.nick
         conn = self._getConnection(source, serverID)
         if conn == None:
+            self.log.info('no conn found, returning none none')
             return (None, None)
         allowOps = self.registryValue('allowOps', conn.channel)
 
@@ -379,7 +388,8 @@ class Soap(callbacks.Plugin):
         command.extend(['-D', '-f'])
         if not lastsave == None and os.path.isfile(lastsave):
             command.extend(['-g', lastsave])
-        command.extend(parameters)
+        if not parameters == None:
+            command.extend(parameters)
 
         commandtext = ''
         for item in command:
@@ -422,7 +432,6 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        conn.intentionalDisconnect = True
         text = 'Server Shutting down'
         self._msgChannel(irc, conn.channel, text)
 
@@ -471,7 +480,8 @@ class Soap(callbacks.Plugin):
 
         if conn.rcon == RconSpecial.SHUTDOWNSAVED:
             if result.startswith('Map successfully saved'):
-                self._msgChannel(irc, conn.channel, result)
+                self._msgChannel(irc, conn.channel, 'Succesfully saved game as autosavesoap.sav')
+                conn.connectionstate = ConnectionState.DISCONNECTING
                 command = 'quit'
                 conn.send_packet(AdminRcon, command = command)
             return
@@ -539,7 +549,7 @@ class Soap(callbacks.Plugin):
             return
 
         if conn.is_connected:
-            conn.intentionalDisconnect = True
+            conn.connectionstate = ConnectionState.DISCONNECTING
             self._disconnect(conn, False)
         else:
             irc.reply('Not connected!!', prefixNick = False)

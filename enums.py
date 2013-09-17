@@ -27,3 +27,10 @@ class ServerStartStatus(EnumHelper):
 class RconSpecial(EnumHelper):
     SILENT              = 0X01 # Keep it quiet, its a secret
     SHUTDOWNSAVED       = 0x02 # game has been saved by the shutdown command
+
+class ConnectionState(EnumHelper):
+    DISCONNECTED        = 0x00
+    CONNECTING          = 0x01
+    AUTHENTICATING      = 0x02
+    CONNECTED           = 0x03
+    DISCONNECTING       = 0x04
