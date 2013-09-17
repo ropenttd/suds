@@ -52,31 +52,31 @@ Configuration
  is bound to 1 server per irc-channel.
 
  Correct format for config would be:
-    config supybot.plugins.Soap.<setting> <value>
+    config plugins.Soap.<setting> <value>
 
  For instance:
-    config supybot.plugins.Soap.host 127.0.0.1
+    config plugins.Soap.host 127.0.0.1
 
  This will set the default for any new server to 127.0.0.1
 
  To change a setting for one server only, you want to specify the channel:
-    config channel [#yourchan] supybot.plugins.Soap.<setting> <value>
+    config channel [#yourchan] plugins.Soap.<setting> <value>
 
  #yourchannel is optional when used in the channel (it will use the current
- channel), but required when used in queries. You'll want to use the latter for
- setting the password.
+ channel), but required when used in queries. You'll want to use the latter method
+ for setting the password.
 
  Example:
     config channel #mychannel supybot.plugins.Soap.host 127.0.0.1
 
  can be used anywhere the bot is, whilst:
-    config channel supybot.plugins.Soap.host 127.0.0.1
+    config channel plugins.Soap.host 127.0.0.1
 
  will change the host for channel the command was issued in.
 
  Finally, you want to activate the channels by configuring the list of
  channels. This is a global value, so theres only one variation:
-    config supybot.plugins.Soap.channels #mychannel #myotherchannel ...
+    config plugins.Soap.channels #mychannel #myotherchannel ...
 
  That will enable below commands for servers tied to those channels. Changing this
  setting will require reloading the plugin so that it can set up all the connections
@@ -103,6 +103,7 @@ Commands:
  companies          - lists companies
  date               - returns the ingame date
  ding               - should be ping, but that command was taken. Dings the server
+ ip                 - Replies with the address needed to join the server as a player
  password           - shows the current password needed to join the server
 
  These commands can also be called with channel or serverID as parameter. This can
