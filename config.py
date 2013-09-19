@@ -16,6 +16,14 @@
 
 import supybot.conf as conf
 import supybot.registry as registry
+import re
+
+class SemicolonSeparatedListOfStrings(registry.SeparatedListOf):
+    Value = registry.String
+    def splitter(self, s):
+        return re.split(r'\s*;\s*', s)
+    joiner = '; '.join
+
 
 def configure(advanced):
     # This will be called by supybot to configure this module.  advanced is
@@ -62,13 +70,14 @@ conf.registerChannelValue(Soap, 'local',
     install to begin with """))
 conf.registerChannelValue(Soap, 'gamedir',
     registry.String('', """ The directory where the OpenTTD executable
-        can be found """))
+    can be found """))
 conf.registerChannelValue(Soap, 'tempdir',
     registry.String('~/tmp/', """ Temporary directory, currently used only to
     store downloaded files. This directory must exist. """))
 conf.registerChannelValue(Soap, 'parameters',
-    registry.SpaceSeparatedListOfStrings('', """ Any command line parameters
-    for OpenTTD. '-D -f' are given, and do not need to be included here"""))
+    registry.SpaceSeparatedListOfStrings('None', """ Any command line parameters
+    for OpenTTD. You shouldn't need to change anything here. -D, -f and -G are
+    already supplied. """))
 
 
 # Miscellanious server-specific settings
@@ -92,5 +101,11 @@ conf.registerChannelValue(Soap, 'passwordInterval',
     included passwords.txt. If you don't want your server to have random
     passwords, leave this set at 0. People can use the password command to find
     the current password """))
+conf.registerChannelValue(Soap, 'welcomeMessage',
+    SemicolonSeparatedListOfStrings('None', """ Welcome message to be sent to
+    players when they connect. Separate lines with semicolons. to insert (for instance)
+    the client name, put {clientname} in the string, including the {}. Valid
+    replacements are: {clientname} {servername} and {serverversion}. Set this to 'None'
+    to disable on-join welcome messages """))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:

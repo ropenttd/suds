@@ -151,6 +151,8 @@ class Soap(callbacks.Plugin):
 
         conn.soapEvents.new_map         += self._rcvNewMap
 
+        conn.soapEvents.clientjoin      += self._rcvClientJoin
+
         conn.soapEvents.chat            += self._rcvChat
         conn.soapEvents.rcon            += self._rcvRcon
         conn.soapEvents.console         += self._rcvConsole
@@ -390,7 +392,7 @@ class Soap(callbacks.Plugin):
         command.extend(['-D', '-f'])
         if not lastsave == None and os.path.isfile(lastsave):
             command.extend(['-g', lastsave])
-        if not parameters == None:
+        if not parameters == 'None':
             command.extend(parameters)
 
         commandtext = ''
@@ -455,6 +457,28 @@ class Soap(callbacks.Plugin):
         text = 'Now playing on %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
         self._msgChannel(irc, conn.channel, text)
 
+    def _rcvClientJoin(self, connChan, client):
+        conn = self.connections.get(connChan)
+        if conn == None or isinstance(client, (long, int)):
+            return
+        irc = conn.irc
+        welcome = self.registryValue('welcomeMessage', conn.channel)
+
+        self.log.info('processing client joining')
+        #self.log.info(welcome)
+        if welcome != None:
+            replacements = {'{clientname}':client.name, '{servername}': conn.serverinfo.name, '{serverversion}': conn.serverinfo.version}
+            for line in welcome:
+                for word, newword in replacements.iteritems():
+                    line = line.replace(word, newword)
+                    self.log.info('replacing %s' % word)
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT_CLIENT,
+                    destType = DestType.CLIENT,
+                    clientID = client.id,
+                    message = line)
+                self.log.info('sending %s' % line)
+
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
         if conn == None:
@@ -464,11 +488,10 @@ class Soap(callbacks.Plugin):
         clientName = str(clientID)
         if client != clientID:
             clientName = client.name
-        playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
 
         if action == Action.CHAT:
             if message.startswith('!admin'):
-                text = '%s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
+                text = '*** %s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
                 self._msgChannel(irc, conn.channel, text)
                 conn.send_packet(AdminChat,
                     action = Action.CHAT,
@@ -488,6 +511,7 @@ class Soap(callbacks.Plugin):
                 self._msgChannel(irc, conn.channel, text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             clientName = clientName.lower()
+            playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
             if clientName.startswith('player') and not playAsPlayer:
                 self._moveToSpectators(irc, conn, client)
 

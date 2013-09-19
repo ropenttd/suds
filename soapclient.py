@@ -78,6 +78,8 @@ class SoapClient(TrackingAdminClient):
 
         self.events.new_map         += self._rcvNewMap
 
+        self.events.clientjoin      += self._rcvClientJoin
+
         self.events.chat            += self._rcvChat
         self.events.rcon            += self._rcvRcon
         self.events.rconend         += self._rcvRconEnd
@@ -111,6 +113,9 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvNewMap(self, mapinfo, serverinfo):
         self.soapEvents.new_map(self._channel, mapinfo, serverinfo)
+
+    def _rcvClientJoin(self, client):
+        self.soapEvents.clientjoin(self._channel, client)
 
     def _rcvChat(self, **kwargs):
         data = dict(kwargs.items())
