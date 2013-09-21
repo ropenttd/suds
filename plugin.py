@@ -850,8 +850,8 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
         version = conn.serverinfo.version
-        stable = re.compile('\d\.\d\.\d')
-        trunk = re.compile('r\d{5}')
+        stable = '\d\.\d\.\d'
+        trunk = 'r\d{5}'
 
         url = 'http://www.openttd.org/en/'
         if re.match(stable, version):
