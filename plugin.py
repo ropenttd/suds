@@ -25,6 +25,7 @@ import supybot.plugins as plugins
 
 import os
 import random
+import re
 import socket
 import subprocess
 import sys
@@ -464,20 +465,16 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
         welcome = self.registryValue('welcomeMessage', conn.channel)
 
-        self.log.info('processing client joining')
-        #self.log.info(welcome)
         if welcome != None:
             replacements = {'{clientname}':client.name, '{servername}': conn.serverinfo.name, '{serverversion}': conn.serverinfo.version}
             for line in welcome:
                 for word, newword in replacements.iteritems():
                     line = line.replace(word, newword)
-                    self.log.info('replacing %s' % word)
                 conn.send_packet(AdminChat,
                     action = Action.CHAT_CLIENT,
                     destType = DestType.CLIENT,
                     clientID = client.id,
                     message = line)
-                self.log.info('sending %s' % line)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
@@ -838,6 +835,35 @@ class Soap(callbacks.Plugin):
         else:
             irc.reply(conn.clientPassword)
     password = wrap(password, [optional('text')])
+
+    def download(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        tells you the current password needed for joining the [specified] game server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if conn == None:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        version = conn.serverinfo.version
+        stable = re.compile('\d\.\d\.\d')
+        trunk = re.compile('r\d{5}')
+
+        url = 'http://www.openttd.org/en/'
+        if re.match(stable, version):
+            url += 'download-stable'
+        elif re.match(trunk, version):
+            url += 'download-trunk'
+        else:
+            url = 'Non-vanilla version, no known download URL yet'
+        irc.reply(url)
+    download = wrap(download, [optional('text')])
+
+
 
 
     # Relay IRC back ingame
