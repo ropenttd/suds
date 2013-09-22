@@ -107,5 +107,9 @@ conf.registerChannelValue(Soap, 'welcomeMessage',
     the client name, put {clientname} in the string, including the {}. Valid
     replacements are: {clientname} {servername} and {serverversion}. Set this to 'None'
     to disable on-join welcome messages """))
+conf.registerChannelValue(Soap, 'downloadUrl',
+    registry.String('None', """ Custom download url. Use only if using a custom version
+    that cannot be obtained from openttd.org. Soap will automatically generate url's
+    for openttd stable and nightly versions."""))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
