@@ -837,64 +837,75 @@ class Soap(callbacks.Plugin):
     password = wrap(password, [optional('text')])
 
     def download(self, irc, msg, args, osType, serverID):
-        """ [Server ID or channel]
+        """ [OS type/program] [Server ID or channel]
 
-        tells you the current password needed for joining the [specified] game server
+        Returns the url to download the client for the current game. Also links to some starter programs
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
         if conn == None:
             return
 
-        if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
-            return
-
-        customUrl = self.registryValue('downloadUrl', conn.channel)
-        if customUrl == 'None':
-            version = conn.serverinfo.version
-            stable = '\d\.\d\.\d'
-            trunk = 'r\d{5}'
-            if osType == None:
-                actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
-                irc.reply('%sdownload lin|lin64|osx|source|win32|win64|win9x' % actionChar)
-                url = 'http://www.openttd.org/en/'
-                if re.match(stable, version):
-                    url += 'download-stable/%s' % version
-                elif re.match(trunk, version):
-                    url += 'download-trunk/%s' % version
-                else:
-                    url = None
-            else:
-                url = 'http://binaries.openttd.org/'
-                if re.match(stable, version):
-                    url += 'releases/%s/openttd-%s-' % (version, version)
-                elif re.match(trunk, version):
-                    url += 'nightlies/trunk/%s/openttd-trunk-%s-' % (version, version)
-                
-                if osType.startswith('lin'):
-                    url += 'linux-generic-'
-                    if osType == 'lin':
-                        url += 'i686.tar.xz'
-                    elif osType == 'lin64':
-                        url += 'amd64.tar.xz'
+        url = None
+        if osType == 'autostart':
+            url = 'http://www.openttdcoop.org/wiki/Autostart'
+        elif osType == 'autottd':
+            url = 'http://www.openttdcoop.org/wiki/AutoTTD'
+        elif osType == 'ottdau':
+            url = 'http://www.openttdcoop.org/winupdater'
+        else:
+            if conn.connectionstate != ConnectionState.CONNECTED:
+                irc.reply('Not connected!!', prefixNick = False)
+                return
+            customUrl = self.registryValue('downloadUrl', conn.channel)
+            if customUrl == 'None':
+                version = conn.serverinfo.version
+                stable = '\d\.\d\.\d'
+                trunk = 'r\d{5}'
+                if osType == None:
+                    actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
+                    irc.reply('%sdownload autostart|autottd|lin|lin64|osx|ottdau|source|win32|win64|win9x'
+                        % actionChar)
+                    url = 'http://www.openttd.org/en/'
+                    if re.match(stable, version):
+                        url += 'download-stable/%s' % version
+                    elif re.match(trunk, version):
+                        url += 'download-trunk/%s' % version
                     else:
                         url = None
-                elif osType == 'osx':
-                    url += 'macosx-universal.zip'
-                elif osType == 'source':
-                    url += 'source.tar.xz'
-                elif osType.startswith('win'):
-                    url += 'windows-%s.zip' % osType
                 else:
-                    url = None
-        else:
-            url = customUrl
+                    url = 'http://binaries.openttd.org/'
+                    if re.match(stable, version):
+                        url += 'releases/%s/openttd-%s-' % (version, version)
+                    elif re.match(trunk, version):
+                        url += 'nightlies/trunk/%s/openttd-trunk-%s-' % (version, version)
+                    else:
+                        url = None
+                    if not url == None:
+                        if osType.startswith('lin'):
+                            url += 'linux-generic-'
+                            if osType == 'lin':
+                                url += 'i686.tar.xz'
+                            elif osType == 'lin64':
+                                url += 'amd64.tar.xz'
+                            else:
+                                url = None
+                        elif osType == 'osx':
+                            url += 'macosx-universal.zip'
+                        elif osType == 'source':
+                            url += 'source.tar.xz'
+                        elif osType.startswith('win'):
+                            url += 'windows-%s.zip' % osType
+                        else:
+                            url = None
+            else:
+                url = customUrl
         if not url == None:
             irc.reply(url)
         else:
             irc.reply('Couldn\'t decipher download url')
-    download = wrap(download, [optional(('literal', ['lin', 'lin64', 'osx', 'win32', 'win64', 'win9x', 'source'])), optional('text')])
+    download = wrap(download, [optional(('literal',
+        ['autostart', 'autottd', 'lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])), optional('text')])
 
 
 
