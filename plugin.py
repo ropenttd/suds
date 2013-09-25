@@ -385,12 +385,13 @@ class Soap(callbacks.Plugin):
 
         pidfilename = os.path.join(gamedir, 'openttd.pid')
         executable = os.path.join(gamedir, 'openttd')
+        config = os.path.join(gamedir, 'openttd.cfg')
         autosavedir = os.path.join(gamedir, 'save/autosave/')
         lastsave = self._getLatestAutoSave(autosavedir)
 
         command = []
         command.append(executable)
-        command.extend(['-D', '-f'])
+        command.extend(['-D', '-f', '-c', config])
         if not lastsave == None and os.path.isfile(lastsave):
             command.extend(['-g', lastsave])
         if not parameters == 'None':

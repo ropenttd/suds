@@ -76,7 +76,7 @@ conf.registerChannelValue(Soap, 'tempdir',
     store downloaded files. This directory must exist. """))
 conf.registerChannelValue(Soap, 'parameters',
     registry.SpaceSeparatedListOfStrings('None', """ Any command line parameters
-    for OpenTTD. You shouldn't need to change anything here. -D, -f and -G are
+    for OpenTTD. You shouldn't need to change anything here. -D, -f, -c and -g are
     already supplied. """))
 
 
