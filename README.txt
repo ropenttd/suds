@@ -112,6 +112,10 @@ Commands:
  Commands marked with * require being opped or trusted (depending on allowOps).
  Commands marked with ^ only work if the server's local setting is True.
 
+ There are also 2 ingame commands:
+ !admin             - sends a message to irc requesting admins look at the server
+ !nick <newnick>    - will change the ingame nick of the caller
+
 
 
 Todo:
