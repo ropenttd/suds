@@ -119,12 +119,6 @@ Commands:
 
 
 
-Todo:
- screenshots
- file-based stuff (updating openttd etc)
-
-
-
 Credits:
  Taede Werkhoven: For writing the plugin
  Planetmaker: Gave me the idea to write this plugin
