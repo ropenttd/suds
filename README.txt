@@ -97,6 +97,7 @@ Commands:
  unpause*           - manually unpauses the game (sets min_active_clients to 0)
  auto*              - turns on autopause, and re-sets min_active_clients to the
                        configured amount
+ getsave*^          - download savegame from url
  rcon*              - sends an rcon command to the server
  start*^            - starts OpenTTD dedicated server
  clients            - lists the clients connected to the server
@@ -126,5 +127,6 @@ Todo:
 
 Credits:
  Taede Werkhoven: For writing the plugin
+ Planetmaker: Gave me the idea to write this plugin
  Xaroth: For writing libottdadmin2, which also served as an example for Soap
  Dihedral: generated passwords.txt from OpenTTD source

@@ -33,6 +33,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib2
 
 from datetime import datetime
 
@@ -451,6 +452,20 @@ class Soap(callbacks.Plugin):
                     return ServerStartStatus.SUCCESSNOPIDFILE
                 return ServerStartStatus.SUCCESS
         return ServerStartStatus.FAILNOPID
+
+    def _dlfile(self, url, directory):
+        try:
+            f = urllib2.urlopen(url)
+            savefile = os.path.join(directory, os.path.basename(url))
+            with open(savefile, "wb") as local_file:
+                local_file.write(f.read())
+        except urllib2.HTTPError, e:
+            return (e.code, url)
+        except urllib2.URLError, e:
+            return (e.reason, url)
+        return savefile
+
+
 
 
 
@@ -1029,6 +1044,31 @@ class Soap(callbacks.Plugin):
             text = 'Server failed to start, I\'m not sure what went wrong'
         irc.reply(text, prefixNick = False)
     start = wrap(start, [optional('text')])
+
+    def getsave(self, irc, msg, args, saveUrl, serverID):
+        """ [Server ID or channel] <Http Url of savegame>
+
+        Downloads a savegame file over HTTP and saves it in the saves dir of the [specified] server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if conn == None:
+            return
+        if not self.registryValue('local', conn.channel):
+            irc.reply('Sorry, this server is not set up as local', prefixNick = False)
+            return
+
+        if saveUrl[-4:] == '.sav':
+            gamedir = self.registryValue('gamedir', conn.channel)
+            savedir = os.path.join(gamedir, 'save/')
+            savegame = self._dlfile(saveUrl, savedir)
+            if isinstance(savegame, tuple):
+                irc.reply('Something went wrong: %s URL: %s' % (savegame[0], savegame[1]))
+            elif os.path.isfile(savegame):
+                irc.reply('File succesfully saved')
+        else:
+            irc.reply('Sorry, only .sav files are supported')
+    getsave = wrap(getsave, ['httpUrl', optional('text')])
 
 Class = Soap
 
