@@ -44,6 +44,14 @@ Soap = conf.registerPlugin('Soap')
 conf.registerGlobalValue(Soap, 'channels',
     registry.SpaceSeparatedListOfStrings('', """ The channels you wish to use
         for OpenTTD communication """))
+conf.registerGlobalValue(Soap, 'tempdir',
+    registry.String('~/tmp/', """ Temporary directory, currently used only to
+    store downloaded files. This directory must exist. """))
+conf.registerGlobalValue(Soap, 'logdir',
+    registry.String('None', """ Logging directory. This is where logfiles are
+    saved to. It will rotate logs when a new game starts, and back up the old
+    log. A maximum of 2 logs are backed up. To disable logging, set this to an
+    invalid path or 'None' """))
 
 # OpenTTD server configuration
 conf.registerChannelValue(Soap, 'serverID',
@@ -71,14 +79,10 @@ conf.registerChannelValue(Soap, 'local',
 conf.registerChannelValue(Soap, 'gamedir',
     registry.String('', """ The directory where the OpenTTD executable
     can be found """))
-conf.registerChannelValue(Soap, 'tempdir',
-    registry.String('~/tmp/', """ Temporary directory, currently used only to
-    store downloaded files. This directory must exist. """))
 conf.registerChannelValue(Soap, 'parameters',
     registry.SpaceSeparatedListOfStrings('None', """ Any command line parameters
     for OpenTTD. You shouldn't need to change anything here. -D, -f, -c and -g are
     already supplied. """))
-
 
 # Miscellanious server-specific settings
 conf.registerChannelValue(Soap, 'autoConnect',

@@ -25,8 +25,8 @@ class ServerStartStatus(EnumHelper):
     FAILUNKNOWN         = 0x05 # Server failed to start, unhandled error
 
 class RconSpecial(EnumHelper):
-    SILENT              = 0X01 # Keep it quiet, its a secret
-    SHUTDOWNSAVED       = 0x02 # game has been saved by the shutdown command
+    SILENT              = 0X00 # Keep it quiet, its a secret
+    SHUTDOWNSAVED       = 0x01 # game has been saved by the shutdown command
 
 class ConnectionState(EnumHelper):
     DISCONNECTED        = 0x00

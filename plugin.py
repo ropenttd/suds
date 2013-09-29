@@ -23,6 +23,8 @@ import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 import supybot.plugins as plugins
 
+import logging
+import logging.handlers
 import os
 import random
 import re
@@ -157,6 +159,7 @@ class Soap(callbacks.Plugin):
         conn.soapEvents.chat            += self._rcvChat
         conn.soapEvents.rcon            += self._rcvRcon
         conn.soapEvents.console         += self._rcvConsole
+        conn.soapEvents.cmdlogging      += self._rcvCmdLogging
 
         conn.soapEvents.pong            += self._rcvPong
 
@@ -225,9 +228,23 @@ class Soap(callbacks.Plugin):
             port        = self.registryValue('port', channel),
             channel     = channel,
             name        = '%s-Soap' % irc.nick)
+        self._initlogger(conn, self.registryValue('logdir'))
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
         self.registeredConnections[conn.filenumber] = conn
+
+    def _initlogger(self, conn, logfile):
+        if os.path.isdir(logfile):
+            conn.logger = logging.getLogger('Soap-%s' % conn.channel)
+            if not len(conn.logger.handlers):
+                logfile = os.path.join(logfile, '%s.log' % conn.channel)
+                logformat = logging.Formatter('%(asctime)s %(message)s')
+                handler = logging.handlers.RotatingFileHandler(logfile)
+                handler.setFormatter(logformat)
+                conn.logger.addHandler(handler)
+            conn.logger.setLevel(logging.INFO)
+        else:
+            conn.logger = None
 
     def _disconnect(self, conn, forced):
         if forced:
@@ -339,7 +356,8 @@ class Soap(callbacks.Plugin):
                 irc.reply(message, prefixNick = False)
                 return
             conn.rcon = source
-            self.log.info('rcon command: %s' % command)
+            logMessage = '<RCON> Nick: %s command: %s' % (msg.nick, command)
+            self._logEvent(conn, logMessage)
             conn.send_packet(AdminRcon, command = command)
 
     def _getLatestAutoSave(self, autosavedir):
@@ -353,6 +371,12 @@ class Soap(callbacks.Plugin):
                     max_mtime = mtime
                     save = fullpath
         return save
+
+    def _logEvent(self, conn, message):
+        try:
+            conn.logger.info(message)
+        except AttributeError:
+            pass
 
     def _checkIfRunning(self, gamedir):
         pidfilename = gamedir + 'openttd.pid'
@@ -464,10 +488,15 @@ class Soap(callbacks.Plugin):
         if conn == None or isinstance(client, (long, int)):
             return
         irc = conn.irc
+        logMessage = '<JOIN> Name: %s (Host: %s, ClientID: %s)' % (client.name, client.id, client.hostname)
+        self._logEvent(conn, logMessage)
         welcome = self.registryValue('welcomeMessage', conn.channel)
 
         if welcome != None:
-            replacements = {'{clientname}':client.name, '{servername}': conn.serverinfo.name, '{serverversion}': conn.serverinfo.version}
+            replacements = {
+                '{clientname}':client.name,
+                '{servername}': conn.serverinfo.name,
+                '{serverversion}': conn.serverinfo.version}
             for line in welcome:
                 for word, newword in replacements.iteritems():
                     line = line.replace(word, newword)
@@ -500,7 +529,9 @@ class Soap(callbacks.Plugin):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
+                    logMessage = '<NAMECHANGE> Old name: %s New Name: %s (Host: %s)' % (clientName, newName, cleint.hostname)
                     text = '*** %s has changed his/her name to %s' % (clientName, newName)
+                    self._logEvent(conn, logMessage)
                     self._msgChannel(irc, conn.channel, text)
                     command = 'client_name %s %s' % (clientID, newName)
                     conn.send_packet(AdminRcon, command = command)
@@ -528,15 +559,6 @@ class Soap(callbacks.Plugin):
             return
         self._msgChannel(irc, conn.rcon, result)
 
-    def _rcvPong(self, connChan, start, end, delta):
-        conn = self.connections.get(connChan)
-        if conn == None:
-            return
-        irc = conn.irc
-
-        text = 'Dong! reply took %s' % str(delta)
-        self._msgChannel(irc, conn.channel, text)
-
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
         if conn == None:
@@ -551,6 +573,33 @@ class Soap(callbacks.Plugin):
             ircMessage = message[3:]
             if ircMessage.startswith('***'):
                 self._msgChannel(irc, conn.channel, ircMessage)
+
+    def _rcvCmdLogging(self, connChan, frame, param1, param2, tile, text, company, commandID, clientID):
+        conn = self.connections.get(connChan)
+        if conn == None:
+            return
+
+        if clientID == 1:
+            name = 'Server'
+        else:
+            client = conn.clients.get(clientID)
+            name = client.name
+        commandName = conn.commands.get(commandID)
+        if commandName == None:
+            commandName = commandID
+        text = '<COMMAND> Frame: %s Name: %s Command: %s Tile: %s Param1: %s Param2: %s Text: \'%s\'' % (
+            frame, name, commandName, tile, param1, param2, text)
+        self.log.info(text)
+        self._logEvent(conn, text)
+
+    def _rcvPong(self, connChan, start, end, delta):
+        conn = self.connections.get(connChan)
+        if conn == None:
+            return
+        irc = conn.irc
+
+        text = 'Dong! reply took %s' % str(delta)
+        self._msgChannel(irc, conn.channel, text)
 
 
 
@@ -945,6 +994,10 @@ class Soap(callbacks.Plugin):
     # Local-type only commands
 
     def start(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Starts the specified server. Only available if plugins.Soap.local is True
+        """
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
         if conn == None:
             return

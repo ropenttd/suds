@@ -18,6 +18,7 @@
 from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
 from libottdadmin2.enums import UpdateType, UpdateFrequency
+from libottdadmin2.packets import *
 
 from enums import RconSpecial, ConnectionState
 
@@ -49,8 +50,11 @@ class SoapEvents(object):
         self.chat           = Event()
         self.rcon           = Event()
         self.console        = Event()
+        self.cmdlogging     = Event()
 
         self.pong           = Event()
+
+
 
 class SoapClient(TrackingAdminClient):
 
@@ -63,6 +67,7 @@ class SoapClient(TrackingAdminClient):
         self.soapEvents = SoapEvents()
         self._attachEvents()
 
+        self.logger = None
         self.rcon = RconSpecial.SILENT
         self.connectionstate = ConnectionState.DISCONNECTED
         self.registered = False
@@ -84,6 +89,7 @@ class SoapClient(TrackingAdminClient):
         self.events.rcon            += self._rcvRcon
         self.events.rconend         += self._rcvRconEnd
         self.events.console         += self._rcvConsole
+        self.events.cmdlogging      += self._rcvCmdLogging
 
         self.events.pong            += self._rcvPong
 
@@ -128,11 +134,16 @@ class SoapClient(TrackingAdminClient):
     def _rcvRconEnd(self, command):
         self.rcon = RconSpecial.SILENT
 
-    def _rcvPong(self, start, end, delta):
-        self.soapEvents.pong(self._channel, start, end, delta)
-
     def _rcvConsole(self, message, origin):
         self.soapEvents.console(self._channel, origin, message)
+
+    def _rcvCmdLogging(self, **kwargs):
+        data = dict(kwargs.items())
+        data['connChan'] = self._channel
+        self.soapEvents.cmdlogging(**data)
+
+    def _rcvPong(self, start, end, delta):
+        self.soapEvents.pong(self._channel, start, end, delta)
 
 
 
