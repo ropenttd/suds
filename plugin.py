@@ -586,7 +586,7 @@ class Soap(callbacks.Plugin):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
-                    logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (clientName, newName, client.hostname)
+                    logMessage = '<NAMECHANGE> Old Name: \'%s\' New Name: \'%s\' (Host: %s)' % (clientName, newName, client.hostname)
                     text = '*** %s has changed his/her name to %s' % (clientName, newName)
                     self._logEvent(conn, logMessage)
                     self._msgChannel(irc, conn.channel, text)
@@ -600,6 +600,19 @@ class Soap(callbacks.Plugin):
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
             if clientName.startswith('player') and not playAsPlayer:
                 self._moveToSpectators(irc, conn, client)
+            
+            if not isinstance(client, (long, int)):
+                company = conn.companies.get(client.play_as)
+                if action == Action.COMPANY_JOIN:
+                    joining = 'JOIN'
+                else:
+                    joining = 'NEW'
+                logMessage = '<COMPANY %s> Name: \'%s\' Company Name: \'%s\' Company ID: %s' % (
+                    joining, clientName, company.name, company.id)
+                self._logEvent(conn, logMessage)
+        elif action == Action.COMPANY_SPECTATOR:
+            logMessage = '<SPECTATOR JOIN> Name: \'%s\'' % clientName
+            self._logEvent(conn, logMessage)
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
