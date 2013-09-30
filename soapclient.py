@@ -18,7 +18,6 @@
 from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
 from libottdadmin2.enums import UpdateType, UpdateFrequency
-from libottdadmin2.packets import *
 
 from enums import RconSpecial, ConnectionState
 
@@ -84,6 +83,8 @@ class SoapClient(TrackingAdminClient):
         self.events.new_map         += self._rcvNewMap
 
         self.events.clientjoin      += self._rcvClientJoin
+        self.events.clientupdate    += self._rcvClientUpdate
+        self.events.clientquit      += self._rcvClientQuit
 
         self.events.chat            += self._rcvChat
         self.events.rcon            += self._rcvRcon
@@ -122,6 +123,12 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvClientJoin(self, client):
         self.soapEvents.clientjoin(self._channel, client)
+
+    def _rcvClientUpdate(self, old, client, changed):
+        self.soapEvents.clientupdate(self._channel, old, client, changed)
+
+    def _rcvClientQuit(self, client, errorcode):
+        self.soapEvents.clientquit(self._channel, client, errorcode)
 
     def _rcvChat(self, **kwargs):
         data = dict(kwargs.items())
