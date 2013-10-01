@@ -14,16 +14,13 @@
 # <http://www.gnu.org/licenses/>.
 ###
 
-import supybot.conf as conf
 from supybot.commands import *
 import supybot.callbacks as callbacks
-import supybot.plugins as plugins
 
 import logging
 import logging.handlers
 import os.path
 import random
-import re
 import socket
 import sys
 import threading
@@ -798,45 +795,7 @@ class Soap(callbacks.Plugin):
                 return
             customUrl = self.registryValue('downloadUrl', conn.channel)
             if customUrl == 'None':
-                version = conn.serverinfo.version
-                stable = '\d\.\d\.\d'
-                trunk = 'r\d{5}'
-                if osType == None:
-                    actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
-                    irc.reply('%sdownload autostart|autottd|lin|lin64|osx|ottdau|source|win32|win64|win9x'
-                        % actionChar)
-                    url = 'http://www.openttd.org/en/'
-                    if re.match(stable, version):
-                        url += 'download-stable/%s' % version
-                    elif re.match(trunk, version):
-                        url += 'download-trunk/%s' % version
-                    else:
-                        url = None
-                else:
-                    url = 'http://binaries.openttd.org/'
-                    if re.match(stable, version):
-                        url += 'releases/%s/openttd-%s-' % (version, version)
-                    elif re.match(trunk, version):
-                        url += 'nightlies/trunk/%s/openttd-trunk-%s-' % (version, version)
-                    else:
-                        url = None
-                    if not url == None:
-                        if osType.startswith('lin'):
-                            url += 'linux-generic-'
-                            if osType == 'lin':
-                                url += 'i686.tar.xz'
-                            elif osType == 'lin64':
-                                url += 'amd64.tar.xz'
-                            else:
-                                url = None
-                        elif osType == 'osx':
-                            url += 'macosx-universal.zip'
-                        elif osType == 'source':
-                            url += 'source.tar.xz'
-                        elif osType.startswith('win'):
-                            url += 'windows-%s.zip' % osType
-                        else:
-                            url = None
+                url = utils.generateDownloadUrl(irc, conn.serverinfo.version, osType)
             else:
                 url = customUrl
         if not url == None:
