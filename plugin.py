@@ -15,28 +15,24 @@
 ###
 
 import supybot.conf as conf
-import supybot.utils as utils
-import supybot.ircdb as ircdb
 import supybot.ircmsgs as ircmsgs
 from supybot.commands import *
-import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 import supybot.plugins as plugins
 
 import logging
 import logging.handlers
-import os
+import os.path
 import random
 import re
 import socket
-import subprocess
 import sys
 import threading
 import time
-import urllib2
 
 from datetime import datetime
 
+import soaputils as utils
 from soapclient import SoapClient
 from enums import *
 
@@ -84,11 +80,11 @@ class Soap(callbacks.Plugin):
                     if (event & POLLIN) or (event & POLLPRI):
                         packet = conn.recv_packet()
                         if packet == None:
-                            self._disconnect(conn, True)
+                            utils.disconnect(conn, True)
                         # else:
                         #     self.log.info('%s - %s' % (conn.ID, packet))
                     elif (event & POLLERR) or (event & POLLHUP):
-                        self._disconnect(conn, True)
+                        utils.disconnect(conn, True)
                 else:
                     time.sleep(0.1)
             # lets not use up 100% cpu if there are no active connections
@@ -125,7 +121,7 @@ class Soap(callbacks.Plugin):
             try:
                 if conn.connectionstate == ConnectionState.CONNECTED:
                     conn.connectionstate = ConnectionState.DISCONNECTING
-                    self._disconnect(conn, False)
+                    utils.disconnect(conn, False)
             except NameError:
                 pass
         self.stopPoll.set()
@@ -140,7 +136,7 @@ class Soap(callbacks.Plugin):
                 return
             if conn.connectionstate == ConnectionState.CONNECTED:
                 text = 'Connected to %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
-                self._msgChannel(conn._irc, conn.channel, text)
+                utils.msgChannel(conn._irc, conn.channel, text)
 
 
 
@@ -167,16 +163,16 @@ class Soap(callbacks.Plugin):
         conn.soapEvents.pong            += self._rcvPong
 
     def _connectOTTD(self, irc, conn, source = None, text = 'Connecting...'):
-        self._msgChannel(irc, conn.channel, text)
+        utils.msgChannel(irc, conn.channel, text)
         if source != conn.channel and source != None:
-            self._msgChannel(irc, source, text)
-        conn = self._refreshConnection(conn)
+            utils.msgChannel(irc, source, text)
+        conn = utils.refreshConnection(self.connections, self.registeredConnections, conn)
         self._initSoapClient(conn, irc, conn.channel)
         conn.connectionstate = ConnectionState.CONNECTING
         if not conn.connect():
             conn.connectionstate = ConnectionState.DISCONNECTED
             text = 'Failed to connect'
-            self._msgChannel(irc, conn.channel, text)
+            utils.msgChannel(irc, conn.channel, text)
 
     def _connected(self, connChan):
         conn = self.connections.get(connChan)
@@ -212,12 +208,12 @@ class Soap(callbacks.Plugin):
 
         if conn.serverinfo.name != None:
             text = 'Disconnected from %s' % (conn.serverinfo.name)
-            self._msgChannel(conn.irc, connChan, text)
+            utils.msgChannel(conn.irc, connChan, text)
             conn.serverinfo.name = None
             logMessage = '<DISCONNECTED>'
-            self._logEvent(conn, logMessage)
+            utils.logEvent(conn.logger, logMessage)
             logMessage = ' '
-            self._logEvent(conn, logMessage)
+            utils.logEvent(conn.logger, logMessage)
 
         if conn.connectionstate == ConnectionState.CONNECTED:
             # We didn't disconnect on purpose, set this so we will reconnect
@@ -236,50 +232,20 @@ class Soap(callbacks.Plugin):
             port        = self.registryValue('port', channel),
             channel     = channel,
             name        = '%s-Soap' % irc.nick)
-        self._initlogger(conn, self.registryValue('logdir'))
+        utils.initLogger(conn, self.registryValue('logdir'))
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
         self.registeredConnections[conn.filenumber] = conn
-
-    def _initlogger(self, conn, logfile):
-        if os.path.isdir(logfile):
-            conn.logger = logging.getLogger('Soap-%s' % conn.channel)
-            if not len(conn.logger.handlers):
-                logfile = os.path.join(logfile, '%s.log' % conn.channel)
-                logformat = logging.Formatter('%(asctime)s %(message)s')
-                handler = logging.handlers.RotatingFileHandler(logfile, backupCount = 2)
-                handler.setFormatter(logformat)
-                conn.logger.addHandler(handler)
-            conn.logger.setLevel(logging.INFO)
-        else:
-            conn.logger = None
-
-    def _disconnect(self, conn, forced):
-        if forced:
-            conn.force_disconnect()
-        else:
-            conn.disconnect()
 
 
 
     # Miscelanious functions
 
-    def _checkPermission(self, irc, msg, channel, allowOps):
-        capable = ircdb.checkCapability(msg.prefix, 'trusted')
-        if capable:
-            return True
-        else:
-            opped = msg.nick in irc.state.channels[channel].ops
-            if opped and allowOps:
-                return True
-            else:
-                return False
-
     def _ircCommandInit(self, irc, msg, serverID, needsPermission):
         source = msg.args[0].lower()
         if source == irc.nick.lower():
             source = msg.nick
-        conn = self._getConnection(source, serverID)
+        conn = utils.getConnection(self.connections, self.channels, source, serverID)
         if conn == None:
             self.log.info('no conn found, returning none none')
             return (None, None)
@@ -287,50 +253,10 @@ class Soap(callbacks.Plugin):
 
         if not needsPermission:
             return (source, conn)
-        elif self._checkPermission(irc, msg, conn.channel, allowOps):
+        elif utils.checkPermission(irc, msg, conn.channel, allowOps):
             return (source, conn)
         else:
             return (None, 'Denied')
-
-    def _getConnection(self, source, serverID = None):
-        conn = None
-
-        if serverID == None:
-            if ircutils.isChannel(source) and source in self.channels:
-                conn = self.connections.get(source)
-        else:
-            if ircutils.isChannel(serverID):
-                conn = self.connections.get(serverID)
-            else:
-                for c in self.connections.itervalues():
-                    if c.ID.lower() == serverID.lower():
-                        conn = c
-        return conn
-
-    def _msgChannel(self, irc, channel, msg):
-        if channel in irc.state.channels or irc.isNick(channel):
-            irc.queueMsg(ircmsgs.privmsg(channel, msg))
-
-    def _moveToSpectators(self, irc, conn, client):
-        command = 'move %s 255' % client.id
-
-        conn.send_packet(AdminRcon, command = command)
-        text = '%s: Please change your name before joining/starting a company' % client.name
-        conn.send_packet(AdminChat,
-            action = Action.CHAT,
-            destType = DestType.BROADCAST,
-            clientID = ClientID.SERVER,
-            message = text)
-        self._msgChannel(irc, conn.channel, text)
-
-    def _refreshConnection(self, conn):
-        try:
-            del self.registeredConnections[conn.filenumber]
-        except KeyError:
-            pass
-        newconn = conn.copy()
-        self.connections[conn.channel] = newconn
-        return newconn
 
     def _ircRcon(self, irc, msg, args, command):
         source = msg.args[0].lower()
@@ -346,12 +272,12 @@ class Soap(callbacks.Plugin):
             serverID = firstWord
             command = command.partition(' ')[2]
 
-        conn = self._getConnection(source, serverID)
+        conn = utils.getConnection(self.connections, self.channels, source, serverID)
         if conn == None:
             return
         allowOps = self.registryValue('allowOps', conn.channel)
 
-        if self._checkPermission(irc, msg, conn.channel, allowOps):
+        if utils.checkPermission(irc, msg, conn.channel, allowOps):
             if conn.connectionstate != ConnectionState.CONNECTED:
                 irc.reply('Not connected!!', prefixNick = False)
                 return
@@ -365,114 +291,8 @@ class Soap(callbacks.Plugin):
                 return
             conn.rcon = source
             logMessage = '<RCON> Nick: %s command: %s' % (msg.nick, command)
-            self._logEvent(conn, logMessage)
+            utils.logEvent(conn.logger, logMessage)
             conn.send_packet(AdminRcon, command = command)
-
-    def _getLatestAutoSave(self, autosavedir):
-        max_mtime = 0
-        save = None
-        for fname in os.listdir(autosavedir):
-            if fname.startswith('autosave'):
-                fullpath = os.path.join(autosavedir, fname)
-                mtime = os.stat(fullpath).st_mtime
-                if mtime > max_mtime:
-                    max_mtime = mtime
-                    save = fullpath
-        return save
-
-    def _logEvent(self, conn, message):
-        try:
-            conn.logger.info(message)
-        except AttributeError:
-            pass
-
-    def _checkIfRunning(self, gamedir):
-        pidfilename = gamedir + 'openttd.pid'
-        executable = 'openttd'
-
-        try:
-            with open(pidfilename) as pidfile:
-                pid = pidfile.readline()
-        except IOError:
-            return False
-        ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
-        output = ps.stdout.read()
-        ps.stdout.close()
-        ps.wait()
-        for line in output.split('\n'):
-            if line != '' and line != None:
-                fields = line.split()
-                pspid = fields[0]
-                pspname = fields[3]
-                if (pspid == pid) and (executable == pspname):
-                    return True
-        else:
-            return False
-
-    def _startserver(self, gamedir, parameters):
-        running = self._checkIfRunning(gamedir)
-
-        if running:
-            return ServerStartStatus.ALREADYRUNNING
-
-        pidfilename = os.path.join(gamedir, 'openttd.pid')
-        executable = os.path.join(gamedir, 'openttd')
-        config = os.path.join(gamedir, 'openttd.cfg')
-        autosavedir = os.path.join(gamedir, 'save/autosave/')
-        lastsave = self._getLatestAutoSave(autosavedir)
-
-        command = []
-        command.append(executable)
-        command.extend(['-D', '-f', '-c', config])
-        if not lastsave == None and os.path.isfile(lastsave):
-            command.extend(['-g', lastsave])
-        if not parameters == 'None':
-            command.extend(parameters)
-
-        commandtext = ''
-        for item in command:
-            commandtext += item + ' '
-        self.log.info('executing: %s' % commandtext)
-
-        try:
-            game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
-            output = game.stdout.read()
-            game.stdout.close()
-            game.wait()
-        except OSError as e:
-            return ServerStartStatus.FAILOSERROR
-        except Exception as e:
-            self.log.info('Except triggered: %s' % sys.exc_info()[0])
-            return ServerStartStatus.FAILUNKNOWN
-
-        pid = None
-        for line in output.split('\n'):
-            self.log.info('OpenTTD output: %s' % line)
-            if 'Forked to background with pid' in line:
-                words = line.split()
-                pid = words[6]
-                try:
-                    with open(pidfilename, 'w') as pidfile:
-                        pidfile.write(str(pid))
-                except:
-                    self.log.info('pidfile error: %s' % sys.exc_info()[0])
-                    return ServerStartStatus.SUCCESSNOPIDFILE
-                return ServerStartStatus.SUCCESS
-        return ServerStartStatus.FAILNOPID
-
-    def _dlfile(self, url, directory):
-        try:
-            f = urllib2.urlopen(url)
-            savefile = os.path.join(directory, os.path.basename(url))
-            with open(savefile, "wb") as local_file:
-                local_file.write(f.read())
-        except urllib2.HTTPError, e:
-            return (e.code, url)
-        except urllib2.URLError, e:
-            return (e.reason, url)
-        return savefile
-
-
 
 
 
@@ -485,9 +305,9 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         text = 'Server Shutting down'
-        self._msgChannel(irc, conn.channel, text)
+        utils.msgChannel(irc, conn.channel, text)
         logMessage = '<SHUTDOWN> Server is shutting down'
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
 
     def _rcvNewGame(self, connChan):
         conn = self.connections.get(connChan)
@@ -496,14 +316,14 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         text = 'Starting new game'
-        self._msgChannel(irc, conn.channel, text)
+        utils.msgChannel(irc, conn.channel, text)
         logMessage = '<END> End of game'
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
         if not conn.logger == None and len(conn.logger.handlers):
             for handler in conn.logger.handlers:
                 handler.doRollover()
         logMessage = '<NEW> New log file started'
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
 
     def _rcvNewMap(self, connChan, mapinfo, serverinfo):
         conn = self.connections.get(connChan)
@@ -512,14 +332,14 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         text = 'Now playing on %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
-        self._msgChannel(irc, conn.channel, text)
+        utils.msgChannel(irc, conn.channel, text)
         logMessage = '-' * 80
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
         logMessage = ' '
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
         logMessage = '<CONNECTED> Version: %s, Name: \'%s\' Mapname: \'%s\' Mapsize: %dx%d' % (
             conn.serverinfo.version, conn.serverinfo.name, conn.mapinfo.name, conn.mapinfo.x, conn.mapinfo.y)
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
 
     def _rcvClientJoin(self, connChan, client):
         conn = self.connections.get(connChan)
@@ -527,7 +347,7 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
         logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (client.name, client.hostname, client.id)
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
         welcome = self.registryValue('welcomeMessage', conn.channel)
 
         if welcome != None:
@@ -552,7 +372,7 @@ class Soap(callbacks.Plugin):
 
         if 'name' in changed:
             logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (old.name, client.name, client.hostname)
-            self._logEvent(conn, logMessage)
+            utils.logEvent(conn.logger, logMessage)
 
     def _rcvClientQuit(self, connChan, client, errorcode):
         conn = self.connections.get(connChan)
@@ -561,7 +381,7 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (client.name, client.hostname, client.id)
-        self._logEvent(conn, logMessage)
+        utils.logEvent(conn.logger, logMessage)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
@@ -576,7 +396,7 @@ class Soap(callbacks.Plugin):
         if action == Action.CHAT:
             if message.startswith('!admin'):
                 text = '*** %s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
-                self._msgChannel(irc, conn.channel, text)
+                utils.msgChannel(irc, conn.channel, text)
                 conn.send_packet(AdminChat,
                     action = Action.CHAT,
                     destType = DestType.BROADCAST,
@@ -588,19 +408,19 @@ class Soap(callbacks.Plugin):
                 if len(newName) > 0:
                     logMessage = '<NAMECHANGE> Old Name: \'%s\' New Name: \'%s\' (Host: %s)' % (clientName, newName, client.hostname)
                     text = '*** %s has changed his/her name to %s' % (clientName, newName)
-                    self._logEvent(conn, logMessage)
-                    self._msgChannel(irc, conn.channel, text)
+                    utils.logEvent(conn.logger, logMessage)
+                    utils.msgChannel(irc, conn.channel, text)
                     command = 'client_name %s %s' % (clientID, newName)
                     conn.send_packet(AdminRcon, command = command)
             else:
                 text = '<%s> %s' % (clientName, message)
-                self._msgChannel(irc, conn.channel, text)
+                utils.msgChannel(irc, conn.channel, text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             clientName = clientName.lower()
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
             if clientName.startswith('player') and not playAsPlayer:
-                self._moveToSpectators(irc, conn, client)
-            
+                utils.moveToSpectators(irc, conn, client)
+
             if not isinstance(client, (long, int)):
                 company = conn.companies.get(client.play_as)
                 if action == Action.COMPANY_JOIN:
@@ -609,10 +429,10 @@ class Soap(callbacks.Plugin):
                     joining = 'NEW'
                 logMessage = '<COMPANY %s> Name: \'%s\' Company Name: \'%s\' Company ID: %s' % (
                     joining, clientName, company.name, company.id)
-                self._logEvent(conn, logMessage)
+                utils.logEvent(conn.logger, logMessage)
         elif action == Action.COMPANY_SPECTATOR:
             logMessage = '<SPECTATOR JOIN> Name: \'%s\'' % clientName
-            self._logEvent(conn, logMessage)
+            utils.logEvent(conn.logger, logMessage)
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
@@ -622,12 +442,12 @@ class Soap(callbacks.Plugin):
 
         if conn.rcon == RconSpecial.SHUTDOWNSAVED:
             if result.startswith('Map successfully saved'):
-                self._msgChannel(irc, conn.channel, 'Succesfully saved game as autosavesoap.sav')
+                utils.msgChannel(irc, conn.channel, 'Succesfully saved game as autosavesoap.sav')
                 conn.connectionstate = ConnectionState.DISCONNECTING
                 command = 'quit'
                 conn.send_packet(AdminRcon, command = command)
             return
-        self._msgChannel(irc, conn.rcon, result)
+        utils.msgChannel(irc, conn.rcon, result)
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -638,11 +458,11 @@ class Soap(callbacks.Plugin):
         if message.startswith('Game Load Failed') or message.startswith('ERROR: Game Load Failed'):
             ircMessage = message.replace("\n", ", ")
             ircMessage = ircMessage.replace("?", ", ")
-            self._msgChannel(irc, conn.channel, ircMessage)
+            utils.msgChannel(irc, conn.channel, ircMessage)
         else:
             ircMessage = message[3:]
             if ircMessage.startswith('***'):
-                self._msgChannel(irc, conn.channel, ircMessage)
+                utils.msgChannel(irc, conn.channel, ircMessage)
 
     def _rcvCmdLogging(self, connChan, frame, param1, param2, tile, text, company, commandID, clientID):
         conn = self.connections.get(connChan)
@@ -669,7 +489,7 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         text = 'Dong! reply took %s' % str(delta)
-        self._msgChannel(irc, conn.channel, text)
+        utils.msgChannel(irc, conn.channel, text)
 
 
 
@@ -710,7 +530,7 @@ class Soap(callbacks.Plugin):
 
         if conn.connectionstate == ConnectionState.CONNECTED:
             conn.connectionstate = ConnectionState.DISCONNECTING
-            self._disconnect(conn, False)
+            utils.disconnect(conn, False)
         else:
             irc.reply('Not connected!!', prefixNick = False)
     apdisconnect = wrap(apdisconnect, [optional('text')])
@@ -1083,7 +903,7 @@ class Soap(callbacks.Plugin):
 
         gamedir = self.registryValue('gamedir', conn.channel)
         parameters = self.registryValue('parameters', conn.channel)
-        result = self._startserver(gamedir, parameters)
+        result = utils.startServer(gamedir, parameters, self.log)
 
         if result == ServerStartStatus.ALREADYRUNNING:
             text = 'Server already running. Try apconnect instead'
@@ -1116,7 +936,7 @@ class Soap(callbacks.Plugin):
         if saveUrl[-4:] == '.sav':
             gamedir = self.registryValue('gamedir', conn.channel)
             savedir = os.path.join(gamedir, 'save/')
-            savegame = self._dlfile(saveUrl, savedir)
+            savegame = utils.downloadFile(saveUrl, savedir)
             if isinstance(savegame, tuple):
                 irc.reply('Something went wrong: %s URL: %s' % (savegame[0], savegame[1]))
             elif os.path.isfile(savegame):

@@ -36,9 +36,11 @@ __contributors__ = {}
 __url__ = '' # 'http://supybot.com/Members/yourname/OttdAdmin/download'
 
 import config
+import soaputils
 import soapclient
 import libottdadmin2
 import plugin
+reload(soaputils)
 reload(soapclient)
 reload(libottdadmin2)
 reload(plugin)
