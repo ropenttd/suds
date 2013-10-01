@@ -122,7 +122,6 @@ def generateDownloadUrl(irc, version, osType = None):
                 url = None
     return url
 
-
 def getConnection(connections, channels, source, serverID = None):
     conn = None
 
@@ -150,18 +149,14 @@ def getLatestAutoSave(autosavedir):
                 save = fullpath
     return save
 
-def initLogger(conn, logfile):
-    if os.path.isdir(logfile):
-        conn.logger = logging.getLogger('Soap-%s' % conn.channel)
+def initLogger(conn, logdir):
+    if os.path.isdir(logdir):
         if not len(conn.logger.handlers):
-            logfile = os.path.join(logfile, '%s.log' % conn.channel)
+            logfile = os.path.join(logdir, '%s.log' % conn.channel)
             logformat = logging.Formatter('%(asctime)s %(message)s')
             handler = logging.handlers.RotatingFileHandler(logfile, backupCount = 2)
             handler.setFormatter(logformat)
             conn.logger.addHandler(handler)
-        conn.logger.setLevel(logging.INFO)
-    else:
-        conn.logger = None
 
 def logEvent(logger, message):
     try:

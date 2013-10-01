@@ -34,3 +34,4 @@ class ConnectionState(EnumHelper):
     AUTHENTICATING      = 0x02
     CONNECTED           = 0x03
     DISCONNECTING       = 0x04
+    SHUTDOWN            = 0x05

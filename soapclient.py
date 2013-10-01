@@ -15,6 +15,8 @@
 # <http://www.gnu.org/licenses/>.
 ###
 
+import logging
+
 from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
 from libottdadmin2.enums import UpdateType, UpdateFrequency
@@ -61,12 +63,14 @@ class SoapClient(TrackingAdminClient):
 
     # Initialization & miscellanious functions
 
-    def __init__(self, events = None):
+    def __init__(self, channel, events = None):
         super(SoapClient, self).__init__(events)
+        self.channel = channel
         self.soapEvents = SoapEvents()
         self._attachEvents()
+        self.logger = logging.getLogger('Soap-%s' % self.channel)
+        self.logger.setLevel(logging.INFO)
 
-        self.logger = None
         self.rcon = RconSpecial.SILENT
         self.connectionstate = ConnectionState.DISCONNECTED
         self.registered = False
@@ -95,7 +99,7 @@ class SoapClient(TrackingAdminClient):
         self.events.pong            += self._rcvPong
 
     def copy(self):
-        obj = SoapClient(self.events)
+        obj = SoapClient(self._channel, self.events)
         for prop in self._settable_args:
             setattr(obj, prop, getattr(self, prop, None))
         return obj
@@ -106,51 +110,51 @@ class SoapClient(TrackingAdminClient):
 
     def _rcvConnected(self):
         self.registered = True
-        self.soapEvents.connected(self._channel)
+        self.soapEvents.connected(self.channel)
 
     def _rcvDisconnected(self, canRetry):
         self.registered = False
-        self.soapEvents.disconnected(self._channel, canRetry)
+        self.soapEvents.disconnected(self.channel, canRetry)
 
     def _rcvShutdown(self):
-        self.soapEvents.shutdown(self._channel)
+        self.soapEvents.shutdown(self.channel)
 
     def _rcvNewGame(self):
-        self.soapEvents.new_game(self._channel)
+        self.soapEvents.new_game(self.channel)
 
     def _rcvNewMap(self, mapinfo, serverinfo):
-        self.soapEvents.new_map(self._channel, mapinfo, serverinfo)
+        self.soapEvents.new_map(self.channel, mapinfo, serverinfo)
 
     def _rcvClientJoin(self, client):
-        self.soapEvents.clientjoin(self._channel, client)
+        self.soapEvents.clientjoin(self.channel, client)
 
     def _rcvClientUpdate(self, old, client, changed):
-        self.soapEvents.clientupdate(self._channel, old, client, changed)
+        self.soapEvents.clientupdate(self.channel, old, client, changed)
 
     def _rcvClientQuit(self, client, errorcode):
-        self.soapEvents.clientquit(self._channel, client, errorcode)
+        self.soapEvents.clientquit(self.channel, client, errorcode)
 
     def _rcvChat(self, **kwargs):
         data = dict(kwargs.items())
-        data['connChan'] = self._channel
+        data['connChan'] = self.channel
         self.soapEvents.chat(**data)
 
     def _rcvRcon(self, result, colour):
-        self.soapEvents.rcon(self._channel, result, colour)
+        self.soapEvents.rcon(self.channel, result, colour)
 
     def _rcvRconEnd(self, command):
         self.rcon = RconSpecial.SILENT
 
     def _rcvConsole(self, message, origin):
-        self.soapEvents.console(self._channel, origin, message)
+        self.soapEvents.console(self.channel, origin, message)
 
     def _rcvCmdLogging(self, **kwargs):
         data = dict(kwargs.items())
-        data['connChan'] = self._channel
+        data['connChan'] = self.channel
         self.soapEvents.cmdlogging(**data)
 
     def _rcvPong(self, start, end, delta):
-        self.soapEvents.pong(self._channel, start, end, delta)
+        self.soapEvents.pong(self.channel, start, end, delta)
 
 
 
@@ -177,13 +181,13 @@ class SoapClient(TrackingAdminClient):
     def ID(self, value):
         self._ID = value
 
-    @property
-    def channel(self):
-        return self._channel
+    # @property
+    # def channel(self):
+    #     return self._channel
 
-    @channel.setter
-    def channel(self, value):
-        self._channel = value.lower()
+    # @channel.setter
+    # def channel(self, value):
+    #     self._channel = value.lower()
 
     update_types = [
         (UpdateType.CLIENT_INFO,        UpdateFrequency.AUTOMATIC),
