@@ -15,7 +15,6 @@
 ###
 
 import supybot.conf as conf
-import supybot.ircmsgs as ircmsgs
 from supybot.commands import *
 import supybot.callbacks as callbacks
 import supybot.plugins as plugins
