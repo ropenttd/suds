@@ -56,7 +56,6 @@ class Soap(callbacks.Plugin):
             self._attachEvents(conn)
             self._initSoapClient(conn, irc)
             self.connections[channel] = conn
-            self.connectionIds.append([conn.channel, conn.ID])
             if self.registryValue('autoConnect', channel):
                 self._connectOTTD(irc, conn, channel)
         self.stopPoll = threading.Event()
@@ -78,8 +77,8 @@ class Soap(callbacks.Plugin):
                         packet = conn.recv_packet()
                         if packet == None:
                             utils.disconnect(conn, True)
-                        else:
-                            self.log.info('%s - %s' % (conn.ID, packet))
+                        # else:
+                        #     self.log.info('%s - %s' % (conn.ID, packet))
                     elif (event & POLLERR) or (event & POLLHUP):
                         utils.disconnect(conn, True)
                 else:
@@ -171,10 +170,6 @@ class Soap(callbacks.Plugin):
             conn.connectionstate = ConnectionState.DISCONNECTED
             text = 'Failed to connect'
             utils.msgChannel(irc, conn.channel, text)
-        else:
-            text = 'Connected'
-            utils.msgChannel(irc, conn.channel, text)
-
 
     def _connected(self, connChan):
         conn = self.connections.get(connChan)
