@@ -23,33 +23,9 @@ import logging
 import logging.handlers
 import os.path
 import re
-import subprocess
 import urllib2
 
 from enums import *
-
-def checkIfRunning(gamedir):
-    pidfilename = gamedir + 'openttd.pid'
-    executable = 'openttd'
-
-    try:
-        with open(pidfilename) as pidfile:
-            pid = pidfile.readline()
-    except IOError:
-        return False
-    ps = subprocess.Popen('ps -A', shell=True, stdout=subprocess.PIPE)
-    output = ps.stdout.read()
-    ps.stdout.close()
-    ps.wait()
-    for line in output.split('\n'):
-        if line != '' and line != None:
-            fields = line.split()
-            pspid = fields[0]
-            pspname = fields[3]
-            if (pspid == pid) and (executable == pspname):
-                return True
-    else:
-        return False
 
 def checkPermission(irc, msg, channel, allowOps):
     capable = ircdb.checkCapability(msg.prefix, 'trusted')
@@ -67,18 +43,6 @@ def disconnect(conn, forced):
         conn.force_disconnect()
     else:
         conn.disconnect()
-
-def downloadFile(url, directory):
-    try:
-        f = urllib2.urlopen(url)
-        savefile = os.path.join(directory, os.path.basename(url))
-        with open(savefile, "wb") as local_file:
-            local_file.write(f.read())
-    except urllib2.HTTPError, e:
-        return (e.code, url)
-    except urllib2.URLError, e:
-        return (e.reason, url)
-    return savefile
 
 def generateDownloadUrl(irc, version, osType = None):
     stable = '\d\.\d\.\d'
@@ -137,18 +101,6 @@ def getConnection(connections, channels, source, serverID = None):
                     conn = c
     return conn
 
-def getLatestAutoSave(autosavedir):
-    max_mtime = 0
-    save = None
-    for fname in os.listdir(autosavedir):
-        if fname.startswith('autosave'):
-            fullpath = os.path.join(autosavedir, fname)
-            mtime = os.stat(fullpath).st_mtime
-            if mtime > max_mtime:
-                max_mtime = mtime
-                save = fullpath
-    return save
-
 def initLogger(conn, logdir):
     if os.path.isdir(logdir):
         if not len(conn.logger.handlers):
@@ -188,54 +140,3 @@ def refreshConnection(connections, registeredConnections, conn):
     newconn = conn.copy()
     connections[conn.channel] = newconn
     return newconn
-
-def startServer(gamedir, parameters, log):
-    running = checkIfRunning(gamedir)
-
-    if running:
-        return ServerStartStatus.ALREADYRUNNING
-
-    pidfilename = os.path.join(gamedir, 'openttd.pid')
-    executable = os.path.join(gamedir, 'openttd')
-    config = os.path.join(gamedir, 'openttd.cfg')
-    autosavedir = os.path.join(gamedir, 'save/autosave/')
-    lastsave = getLatestAutoSave(autosavedir)
-
-    command = []
-    command.append(executable)
-    command.extend(['-D', '-f', '-c', config])
-    if not lastsave == None and os.path.isfile(lastsave):
-        command.extend(['-g', lastsave])
-    if not parameters == 'None':
-        command.extend(parameters)
-
-    commandtext = ''
-    for item in command:
-        commandtext += item + ' '
-    log.info('executing: %s' % commandtext)
-
-    try:
-        game = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE)
-        output = game.stdout.read()
-        game.stdout.close()
-        game.wait()
-    except OSError as e:
-        return ServerStartStatus.FAILOSERROR
-    except Exception as e:
-        log.info('Except triggered: %s' % sys.exc_info()[0])
-        return ServerStartStatus.FAILUNKNOWN
-
-    pid = None
-    for line in output.split('\n'):
-        log.info('OpenTTD output: %s' % line)
-        if 'Forked to background with pid' in line:
-            words = line.split()
-            pid = words[6]
-            try:
-                with open(pidfilename, 'w') as pidfile:
-                    pidfile.write(str(pid))
-            except:
-                log.info('pidfile error: %s' % sys.exc_info()[0])
-                return ServerStartStatus.SUCCESSNOPIDFILE
-            return ServerStartStatus.SUCCESS
-    return ServerStartStatus.FAILNOPID

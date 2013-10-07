@@ -44,9 +44,6 @@ Soap = conf.registerPlugin('Soap')
 conf.registerGlobalValue(Soap, 'channels',
     registry.SpaceSeparatedListOfStrings('', """ The channels you wish to use
         for OpenTTD communication """))
-conf.registerGlobalValue(Soap, 'tempdir',
-    registry.String('~/tmp/', """ Temporary directory, currently used only to
-    store downloaded files. This directory must exist. """))
 conf.registerGlobalValue(Soap, 'logdir',
     registry.String('None', """ Logging directory. This is where logfiles are
     saved to. It will rotate logs when a new game starts, and back up the old
@@ -70,19 +67,11 @@ conf.registerChannelValue(Soap, 'publicAddress',
     to the server """))
 
 # File-related settings
-conf.registerChannelValue(Soap, 'local',
-    registry.Boolean(False, """ Setting this to False will disable any commands
-    requiring the below mentioned configuration options, like start and update.
-    If you want this functionality, set this to True. You will need to make
-    sure the bot has rwx rights on the directories, and there is a working
-    install to begin with """))
-conf.registerChannelValue(Soap, 'gamedir',
-    registry.String('', """ The directory where the OpenTTD executable
-    can be found """))
-conf.registerChannelValue(Soap, 'parameters',
-    registry.SpaceSeparatedListOfStrings('None', """ Any command line parameters
-    for OpenTTD. You shouldn't need to change anything here. -D, -f, -c and -g are
-    already supplied. """))
+conf.registerChannelValue(Soap, 'ofslocation',
+    registry.String('/home/openttdserver/', """ Location of OpenTTD File Scripts
+    (OFS). This can either be a local directory (/path/to/ofs) or in the form of
+    'ssh -p23 user@host:/path/to/ofs/'. In the latter case, make sure to set up
+    the bot-user to have password-less login to the machine with ofs/openttd """))
 
 # Miscellanious server-specific settings
 conf.registerChannelValue(Soap, 'autoConnect',
@@ -107,10 +96,10 @@ conf.registerChannelValue(Soap, 'passwordInterval',
     the current password """))
 conf.registerChannelValue(Soap, 'welcomeMessage',
     SemicolonSeparatedListOfStrings('None', """ Welcome message to be sent to
-    players when they connect. Separate lines with semicolons. to insert (for instance)
-    the client name, put {clientname} in the string, including the {}. Valid
-    replacements are: {clientname} {servername} and {serverversion}. Set this to 'None'
-    to disable on-join welcome messages """))
+    players when they connect. Separate lines with semicolons. to insert (for
+    instance) the client name, put {clientname} in the string, including the {}.
+    Valid replacements are: {clientname} {servername} and {serverversion}. Set
+    this to 'None' to disable on-join welcome messages """))
 conf.registerChannelValue(Soap, 'downloadUrl',
     registry.String('None', """ Custom download url. Use only if using a custom version
     that cannot be obtained from openttd.org. Soap will automatically generate url's

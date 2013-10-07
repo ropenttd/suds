@@ -21,6 +21,7 @@ import supybot.callbacks as callbacks
 import os.path
 import random
 import socket
+from subprocess import check_output, CalledProcessError
 import sys
 import threading
 import time
@@ -159,7 +160,6 @@ class Soap(callbacks.Plugin):
         conn.soapEvents.pong            += self._rcvPong
 
     def _connectOTTD(self, irc, conn, source = None, text = 'Connecting...'):
-        self.log.info(str(conn.channel))
         utils.msgChannel(irc, conn.channel, text)
         if source != conn.channel and source != None:
             utils.msgChannel(irc, source, text)
@@ -839,7 +839,7 @@ class Soap(callbacks.Plugin):
 
 
 
-    # Local-type only commands
+    # ofs related commands
 
     def start(self, irc, msg, args, serverID):
         """ [Server ID or channel]
@@ -853,29 +853,32 @@ class Soap(callbacks.Plugin):
             irc.reply('I am connected to %s, so it\'s safe to assume that its already running' % conn.serverinfo.name,
                 prefixNick = False)
             return
-        if not self.registryValue('local', conn.channel):
-            irc.reply('Sorry, this server is not set up as local', prefixNick = False)
-            return
         text = 'Starting server...'
         irc.reply(text, prefixNick = False)
 
-        gamedir = self.registryValue('gamedir', conn.channel)
-        parameters = self.registryValue('parameters', conn.channel)
-        result = utils.startServer(gamedir, parameters, self.log)
+        ofs = self.registryValue('ofslocation', conn.channel)
+        if ofs.startswith('ssh'):
+            useshell = True
+        elif os.path.isdir(ofs):
+            useshell = False
+        else:
+            irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
+            return
+        command = ofs + 'ofs-start.py %s' % conn.ID
+        self.log.info('executing: %s' % command)
+        command = command.split(' ')
+        try: 
+            output = check_output(command, shell=useshell)
+        except CalledProcessError as e:
+            for line in e.output.splitlines():
+                self.log.info('OFS output: %s' % line)
+            irc.reply('ofs-start reported an error, exitcode: %s. See bot-log for more information.' % e.returncode)
+            return
+        except OSError as e:
+            irc.reply('Couldn\'t start ofs-start, Please review plugins.Soap.ofslocation')
+            return
+        irc.reply('Server started successfully')
 
-        if result == ServerStartStatus.ALREADYRUNNING:
-            text = 'Server already running. Try apconnect instead'
-        elif result == ServerStartStatus.SUCCESS:
-            text = 'Server started succesfully'
-        elif result == ServerStartStatus.SUCCESSNOPIDFILE:
-            text = 'Server started succesfully, but could not write pidfile'
-        elif result == ServerStartStatus.FAILOSERROR:
-            text = 'Server failed to start, couldn\'t find the executable'
-        elif result == ServerStartStatus.FAILNOPID:
-            text = 'Server may not have started correctly, unable to catch the PID'
-        elif result == ServerStartStatus.FAILUNKNOWN:
-            text = 'Server failed to start, I\'m not sure what went wrong'
-        irc.reply(text, prefixNick = False)
     start = wrap(start, [optional('text')])
 
     def getsave(self, irc, msg, args, saveUrl, serverID):
@@ -887,18 +890,34 @@ class Soap(callbacks.Plugin):
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
         if conn == None:
             return
-        if not self.registryValue('local', conn.channel):
-            irc.reply('Sorry, this server is not set up as local', prefixNick = False)
-            return
 
         if saveUrl[-4:] == '.sav':
-            gamedir = self.registryValue('gamedir', conn.channel)
-            savedir = os.path.join(gamedir, 'save/')
-            savegame = utils.downloadFile(saveUrl, savedir)
-            if isinstance(savegame, tuple):
-                irc.reply('Something went wrong: %s URL: %s' % (savegame[0], savegame[1]))
-            elif os.path.isfile(savegame):
-                irc.reply('File succesfully saved')
+            ofs = self.registryValue('ofslocation', conn.channel)
+            if ofs.startswith('ssh'):
+                useshell = True
+            elif os.path.isdir(ofs):
+                useshell = False
+            else:
+                irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
+                return
+            command = ofs + 'ofs-getsave.py %s %s' % (conn.ID, saveUrl)
+            self.log.info('executing: %s' % command)
+            command = command.split(' ')
+            try:
+                output = check_output(command, shell=useshell)
+            except CalledProcessError as e:
+                if e.returncode == 4:
+                    irc.reply('Unable to download savegame. Please check the URL')
+                    return
+                else:
+                    for line in e.output.splitlines():
+                        self.log.info('OFS output: %s' % line)
+                    irc.reply('ofs-getsave reported an error, exitcode: %s. See bot-log for more information.' % e.returncode)
+                    return
+            except OSError as e:
+                irc.reply('Couldn\'t start ofs-getsave, Please review plugins.Soap.ofslocation')
+                return
+            irc.reply('Savegame successfully downloaded')
         else:
             irc.reply('Sorry, only .sav files are supported')
     getsave = wrap(getsave, ['httpUrl', optional('text')])
