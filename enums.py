@@ -24,25 +24,6 @@ class ConnectionState(EnumHelper):
     DISCONNECTING       = 0x04
     SHUTDOWN            = 0x05
 
-class OFSgetsave(enumhelper):
-    SUCCESS             = 0X00
-    INVALIDCONFIG       = 0x01
-    INVALIDSAVEDIR      = 0x02
-    DOWNLOADFAILED      = 0x03
-    BADURL              = 0x04
-
-class OFSstart(enumhelper):
-    SUCCESS             = 0X00
-    INVALIDCONFIG       = 0x01
-    SERVERRUNNING       = 0x02
-    SUCCESSNOPIDFILE    = 0x03
-    FAILNOGAMEDIR       = 0x04
-    FAILNOEXECUTABLE    = 0x05
-    FAILNOSERVERCONF    = 0x06
-    FAAILOSERROR        = 0x07
-    FAILNONZEROEXIT     = 0x08
-    FAILNOPIDFOUND      = 0x09
-
 class RconSpecial(EnumHelper):
     SILENT              = 0X00 # Keep it quiet, its a secret
     SHUTDOWNSAVED       = 0x01 # game has been saved by the shutdown command

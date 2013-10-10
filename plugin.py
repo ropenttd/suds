@@ -21,7 +21,7 @@ import supybot.callbacks as callbacks
 import os.path
 import random
 import socket
-from subprocess import check_output, CalledProcessError
+from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import threading
 import time
@@ -63,55 +63,6 @@ class Soap(callbacks.Plugin):
         self.pollingThread = threading.Thread(target = self._pollThread, name = 'SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
-
-    def _pollThread(self):
-        timeout = 1.0
-
-        while True:
-            if len(self.registeredConnections) >= 1:
-                events = self._pollObj.poll(timeout * POLL_MOD)
-                for fileno, event in events:
-                    conn = self.registeredConnections.get(fileno)
-                    if conn == None:
-                        continue
-                    if (event & POLLIN) or (event & POLLPRI):
-                        packet = conn.recv_packet()
-                        if packet == None:
-                            utils.disconnect(conn, True)
-                        # else:
-                        #     self.log.info('%s - %s' % (conn.ID, packet))
-                    elif (event & POLLERR) or (event & POLLHUP):
-                        utils.disconnect(conn, True)
-                else:
-                    time.sleep(0.1)
-            # lets not use up 100% cpu if there are no active connections
-            else:
-                time.sleep(1)
-            if self.stopPoll.isSet():
-                break
-
-    def _passwordThread(self, conn):
-        pluginDir = os.path.dirname(__file__)
-        pwFileName = os.path.join(pluginDir, 'passwords.txt')
-
-        while True:
-            interval = self.registryValue('passwordInterval', conn.channel)
-            if conn.connectionstate != ConnectionState.CONNECTED:
-                break
-            if conn.rcon == RconSpecial.SILENT:
-                if interval > 0:
-                    newPassword = random.choice(list(open(pwFileName)))
-                    newPassword = newPassword.strip()
-                    newPassword = newPassword.lower()
-                    command = 'set server_password %s' % newPassword
-                    conn.send_packet(AdminRcon, command = command)
-                    conn.clientPassword = newPassword
-                    time.sleep(interval)
-                else:
-                    command = 'set server_password *'
-                    conn.send_packet(AdminRcon, command = command)
-                    conn.clientPassword = None
-                    break
 
     def die(self):
         for conn in self.connections.itervalues():
@@ -168,7 +119,7 @@ class Soap(callbacks.Plugin):
         conn.connectionstate = ConnectionState.CONNECTING
         if not conn.connect():
             conn.connectionstate = ConnectionState.DISCONNECTED
-            text = 'Failed to connect'
+            text = 'Connection failed'
             utils.msgChannel(irc, conn.channel, text)
 
     def _connected(self, connChan):
@@ -232,6 +183,91 @@ class Soap(callbacks.Plugin):
         self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
         self.registeredConnections[conn.filenumber] = conn
+
+
+
+    # Thread functions
+
+    def _commandThread(self, conn, ofsCommand, successText = None):
+        irc = conn.irc
+        ofs = self.registryValue('ofslocation', conn.channel)
+        if ofs.startswith('ssh'):
+            useshell = True
+        elif os.path.isdir(ofs):
+            useshell = False
+        else:
+            irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
+            return
+        command = ofs + '%s' % ofsCommand
+        self.log.info('executing: %s' % command)
+        if not useshell:
+            command = command.split()
+        try:
+            commandObject = Popen(command, shell=useshell, stdout = PIPE)
+        except OSError as e:
+            irc.reply('Couldn\'t start %s, Please review plugins.Soap.ofslocation'
+                % ofscommand.split()[0])
+            return
+        output = commandObject.stdout.read()
+        commandObject.stdout.close()
+        commandObject.wait()
+        if commandObject.returncode:
+            for line in output.splitlines():
+                self.log.info('%s output: %s' % (ofscommand.split()[0], line))
+            irc.reply('%s reported an error, exitcode: %s. See bot-log for more information.'
+                % (ofscommand.split()[0], commandObject.returncode))
+            return
+        if successText:
+            irc.reply(successText, prefixnick = False)
+
+    def _passwordThread(self, conn):
+        pluginDir = os.path.dirname(__file__)
+        pwFileName = os.path.join(pluginDir, 'passwords.txt')
+
+        while True:
+            interval = self.registryValue('passwordInterval', conn.channel)
+            if conn.connectionstate != ConnectionState.CONNECTED:
+                break
+            if conn.rcon == RconSpecial.SILENT:
+                if interval > 0:
+                    newPassword = random.choice(list(open(pwFileName)))
+                    newPassword = newPassword.strip()
+                    newPassword = newPassword.lower()
+                    command = 'set server_password %s' % newPassword
+                    conn.send_packet(AdminRcon, command = command)
+                    conn.clientPassword = newPassword
+                    time.sleep(interval)
+                else:
+                    command = 'set server_password *'
+                    conn.send_packet(AdminRcon, command = command)
+                    conn.clientPassword = None
+                    break
+
+    def _pollThread(self):
+        timeout = 1.0
+
+        while True:
+            if len(self.registeredConnections) >= 1:
+                events = self._pollObj.poll(timeout * POLL_MOD)
+                for fileno, event in events:
+                    conn = self.registeredConnections.get(fileno)
+                    if conn == None:
+                        continue
+                    if (event & POLLIN) or (event & POLLPRI):
+                        packet = conn.recv_packet()
+                        if packet == None:
+                            utils.disconnect(conn, True)
+                        # else:
+                        #     self.log.info('%s - %s' % (conn.ID, packet))
+                    elif (event & POLLERR) or (event & POLLHUP):
+                        utils.disconnect(conn, True)
+                else:
+                    time.sleep(0.1)
+            # lets not use up 100% cpu if there are no active connections
+            else:
+                time.sleep(1)
+            if self.stopPoll.isSet():
+                break
 
 
 
@@ -304,6 +340,7 @@ class Soap(callbacks.Plugin):
         utils.msgChannel(irc, conn.channel, text)
         logMessage = '<SHUTDOWN> Server is shutting down'
         conn.logger.info(logMessage)
+        conn.connectionstate = ConnectionState.SHUTDOWN
 
     def _rcvNewGame(self, connChan):
         conn = self.connections.get(connChan)
@@ -856,29 +893,13 @@ class Soap(callbacks.Plugin):
         text = 'Starting server...'
         irc.reply(text, prefixNick = False)
 
-        ofs = self.registryValue('ofslocation', conn.channel)
-        if ofs.startswith('ssh'):
-            useshell = True
-        elif os.path.isdir(ofs):
-            useshell = False
-        else:
-            irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
-            return
-        command = ofs + 'ofs-start.py %s' % conn.ID
-        self.log.info('executing: %s' % command)
-        command = command.split(' ')
-        try: 
-            output = check_output(command, shell=useshell)
-        except CalledProcessError as e:
-            for line in e.output.splitlines():
-                self.log.info('OFS output: %s' % line)
-            irc.reply('ofs-start reported an error, exitcode: %s. See bot-log for more information.' % e.returncode)
-            return
-        except OSError as e:
-            irc.reply('Couldn\'t start ofs-start, Please review plugins.Soap.ofslocation')
-            return
-        irc.reply('Server started successfully')
-
+        ofsCommand = 'ofs-start.py'
+        successText = 'Server is starting...'
+        cmdThread = threading.Thread(
+            target = self._commandThread,
+            args = [conn, ofsCommand, successText])
+        cmdThread.daemon = True
+        cmdThread.start()
     start = wrap(start, [optional('text')])
 
     def getsave(self, irc, msg, args, saveUrl, serverID):
@@ -892,32 +913,14 @@ class Soap(callbacks.Plugin):
             return
 
         if saveUrl[-4:] == '.sav':
-            ofs = self.registryValue('ofslocation', conn.channel)
-            if ofs.startswith('ssh'):
-                useshell = True
-            elif os.path.isdir(ofs):
-                useshell = False
-            else:
-                irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
-                return
-            command = ofs + 'ofs-getsave.py %s %s' % (conn.ID, saveUrl)
-            self.log.info('executing: %s' % command)
-            command = command.split(' ')
-            try:
-                output = check_output(command, shell=useshell)
-            except CalledProcessError as e:
-                if e.returncode == 4:
-                    irc.reply('Unable to download savegame. Please check the URL')
-                    return
-                else:
-                    for line in e.output.splitlines():
-                        self.log.info('OFS output: %s' % line)
-                    irc.reply('ofs-getsave reported an error, exitcode: %s. See bot-log for more information.' % e.returncode)
-                    return
-            except OSError as e:
-                irc.reply('Couldn\'t start ofs-getsave, Please review plugins.Soap.ofslocation')
-                return
-            irc.reply('Savegame successfully downloaded')
+            irc.reply('Starting download...', prefixNick = False)
+            ofsCommand = 'ofs-getsave.py %s' % saveUrl
+            successText = 'Savegame successfully downloaded'
+            cmdThread = threading.Thread(
+                target = self._commandThread,
+                args = [conn, ofsCommand, successText])
+            cmdThread.daemon = True
+            cmdThread.start()
         else:
             irc.reply('Sorry, only .sav files are supported')
     getsave = wrap(getsave, ['httpUrl', optional('text')])
