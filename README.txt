@@ -8,7 +8,7 @@ IRC: I can usually be found in #openttd on OFTC
 
 
 Prerequisites:
- * working OpenTTD server
+ * working OpenTTD server, with OFS installed and configured
  * Supybot set up in a channel
  * libottdadmin2 by Xaroth installed
 
@@ -18,6 +18,9 @@ Prerequisites:
 
  Supybot comes with its own installation instructions. Those and its user manual
  can be found here: http://sourceforge.net/projects/supybot/
+
+ OFS simply needs to be copied to a directory on the same user@host as that
+ OpenTTD server, and configured. See the included readme.txt for details.
 
 
 
