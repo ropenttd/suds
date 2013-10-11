@@ -188,9 +188,9 @@ class Soap(callbacks.Plugin):
 
     # Thread functions
 
-    def _commandThread(self, conn, ofsCommand, successText = None):
-        irc = conn.irc
+    def _commandThread(self, conn, irc, ofsCommand, successText = None):
         ofs = self.registryValue('ofslocation', conn.channel)
+        command = ofs + '%s' % ofsCommand
         if ofs.startswith('ssh'):
             useshell = True
         elif os.path.isdir(ofs):
@@ -198,7 +198,7 @@ class Soap(callbacks.Plugin):
         else:
             irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
             return
-        command = ofs + '%s' % ofsCommand
+
         self.log.info('executing: %s' % command)
         if not useshell:
             command = command.split()
@@ -475,7 +475,7 @@ class Soap(callbacks.Plugin):
 
         if conn.rcon == RconSpecial.SHUTDOWNSAVED:
             if result.startswith('Map successfully saved'):
-                utils.msgChannel(irc, conn.channel, 'Succesfully saved game as autosavesoap.sav')
+                utils.msgChannel(irc, conn.channel, 'Successfully saved game as autosavesoap.sav')
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
                 conn.send_packet(AdminRcon, command = command)
@@ -878,30 +878,6 @@ class Soap(callbacks.Plugin):
 
     # ofs related commands
 
-    def start(self, irc, msg, args, serverID):
-        """ [Server ID or channel]
-
-        Starts the specified server. Only available if plugins.Soap.local is True
-        """
-        source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
-            return
-        if conn.connectionstate == ConnectionState.CONNECTED:
-            irc.reply('I am connected to %s, so it\'s safe to assume that its already running' % conn.serverinfo.name,
-                prefixNick = False)
-            return
-        text = 'Starting server...'
-        irc.reply(text, prefixNick = False)
-
-        ofsCommand = 'ofs-start.py'
-        successText = 'Server is starting...'
-        cmdThread = threading.Thread(
-            target = self._commandThread,
-            args = [conn, ofsCommand, successText])
-        cmdThread.daemon = True
-        cmdThread.start()
-    start = wrap(start, [optional('text')])
-
     def getsave(self, irc, msg, args, saveUrl, serverID):
         """ [Server ID or channel] <Http Url of savegame>
 
@@ -918,12 +894,60 @@ class Soap(callbacks.Plugin):
             successText = 'Savegame successfully downloaded'
             cmdThread = threading.Thread(
                 target = self._commandThread,
-                args = [conn, ofsCommand, successText])
+                args = [conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
         else:
             irc.reply('Sorry, only .sav files are supported')
     getsave = wrap(getsave, ['httpUrl', optional('text')])
+
+    def start(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Starts the specified server. Only available if plugins.Soap.local is True
+        """
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if conn == None:
+            return
+        if conn.connectionstate == ConnectionState.CONNECTED:
+            irc.reply('I am connected to %s, so it\'s safe to assume that its already running'
+                % conn.serverinfo.name, prefixNick = False)
+            return
+        text = 'Starting server...'
+        irc.reply(text, prefixNick = False)
+
+        ofsCommand = 'ofs-start.py'
+        successText = 'Server is starting...'
+        cmdThread = threading.Thread(
+            target = self._commandThread,
+            args = [conn, irc, ofsCommand, successText])
+        cmdThread.daemon = True
+        cmdThread.start()
+    start = wrap(start, [optional('text')])
+
+    def update(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Updates OpenTTD to the newest revision in its branch
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if conn == None:
+            return
+
+        if conn.connectionstate == ConnectionState.CONNECTED:
+            irc.reply('The server is currently up. In order to update, please shut it down first.',
+                prefixNick = False)
+            return
+        irc.reply('Starting update...', prefixNick = False)
+        ofsCommand = 'ofs-svnupdate.py'
+        successText = 'Game successfully updated'
+        cmdThread = threading.Thread(
+            target = self._commandThread,
+            args = [conn, irc, ofsCommand, successText])
+        cmdThread.daemon = True
+        cmdThread.start()
+    update = wrap(update, [optional('text')])
 
 Class = Soap
 
