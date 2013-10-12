@@ -27,3 +27,4 @@ class ConnectionState(EnumHelper):
 class RconSpecial(EnumHelper):
     SILENT              = 0X00 # Keep it quiet, its a secret
     SHUTDOWNSAVED       = 0x01 # game has been saved by the shutdown command
+    UPDATESAVED         = 0x02 # game has been saved prior to shutting down for update

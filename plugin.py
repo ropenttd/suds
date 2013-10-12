@@ -60,7 +60,9 @@ class Soap(callbacks.Plugin):
             if self.registryValue('autoConnect', channel):
                 self._connectOTTD(irc, conn, channel)
         self.stopPoll = threading.Event()
-        self.pollingThread = threading.Thread(target = self._pollThread, name = 'SoapPollingThread')
+        self.pollingThread = threading.Thread(
+            target = self._pollThread,
+            name = 'SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
 
@@ -83,7 +85,8 @@ class Soap(callbacks.Plugin):
             if conn == None:
                 return
             if conn.connectionstate == ConnectionState.CONNECTED:
-                text = 'Connected to %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
+                text = 'Connected to %s (Version %s)' % (
+                    conn.serverinfo.name, conn.serverinfo.version)
                 utils.msgChannel(conn._irc, conn.channel, text)
 
 
@@ -114,7 +117,8 @@ class Soap(callbacks.Plugin):
         utils.msgChannel(irc, conn.channel, text)
         if source != conn.channel and source != None:
             utils.msgChannel(irc, source, text)
-        conn = utils.refreshConnection(self.connections, self.registeredConnections, conn)
+        conn = utils.refreshConnection(
+            self.connections, self.registeredConnections, conn)
         self._initSoapClient(conn, irc)
         conn.connectionstate = ConnectionState.CONNECTING
         if not conn.connect():
@@ -130,7 +134,9 @@ class Soap(callbacks.Plugin):
         conn.connectionstate = ConnectionState.CONNECTED
         pwInterval = self.registryValue('passwordInterval', connChan)
         if pwInterval != 0:
-            pwThread = threading.Thread(target = self._passwordThread, args = [conn])
+            pwThread = threading.Thread(
+                target = self._passwordThread,
+                args = [conn])
             pwThread.daemon = True
             pwThread.start()
         else:
@@ -180,7 +186,8 @@ class Soap(callbacks.Plugin):
             port        = self.registryValue('port', conn.channel),
             name        = '%s-Soap' % irc.nick)
         utils.initLogger(conn, self.registryValue('logdir'))
-        self._pollObj.register(conn.fileno(), POLLIN | POLLERR | POLLHUP | POLLPRI)
+        self._pollObj.register(conn.fileno(),
+            POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
         self.registeredConnections[conn.filenumber] = conn
 
@@ -188,7 +195,8 @@ class Soap(callbacks.Plugin):
 
     # Thread functions
 
-    def _commandThread(self, conn, irc, ofsCommand, successText = None):
+    def _commandThread(self, conn, irc, ofsCommand, successText = None, delay = 0):
+        time.sleep(delay)
         ofs = self.registryValue('ofslocation', conn.channel)
         command = ofs + '%s' % ofsCommand
         if ofs.startswith('ssh'):
@@ -219,6 +227,21 @@ class Soap(callbacks.Plugin):
             return
         if successText:
             irc.reply(successText, prefixnick = False)
+
+        if ofscommand.startswith('ofs-svnupdate.py'):
+            irc.reply('Update successfull, shutting down server...',
+                prefixNick = False)
+            conn.rcon = RconSpecial.UPDATESAVED
+            rconcommand = 'save autosave/autosavesoap'
+            conn.send_packet(AdminRcon, command = rconcommand)
+        elif ofscommand.startswith('ofs-svntobin.py'):
+            ofsCommand = 'ofs-start.py'
+            successText = 'Server is starting...'
+            cmdThread = threading.Thread(
+                target = self._commandThread,
+                args = [conn, irc, ofsCommand, successText])
+            cmdThread.daemon = True
+            cmdThread.start()
 
     def _passwordThread(self, conn):
         pluginDir = os.path.dirname(__file__)
@@ -277,7 +300,8 @@ class Soap(callbacks.Plugin):
         source = msg.args[0].lower()
         if source == irc.nick.lower():
             source = msg.nick
-        conn = utils.getConnection(self.connections, self.channels, source, serverID)
+        conn = utils.getConnection(
+            self.connections, self.channels, source, serverID)
         if conn == None:
             self.log.info('no conn found, returning none none')
             return (None, None)
@@ -304,7 +328,8 @@ class Soap(callbacks.Plugin):
             serverID = firstWord
             command = command.partition(' ')[2]
 
-        conn = utils.getConnection(self.connections, self.channels, source, serverID)
+        conn = utils.getConnection(
+            self.connections, self.channels, source, serverID)
         if conn == None:
             return
         allowOps = self.registryValue('allowOps', conn.channel)
@@ -318,11 +343,12 @@ class Soap(callbacks.Plugin):
                 irc.reply(message, prefixNick = False)
                 return
             if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
-                message = "RCON Command too long (%d/%d)" % (len(command), NETWORK_RCONCOMMAND_LENGTH)
+                message = "RCON Command too long (%d/%d)" % (
+                    len(command), NETWORK_RCONCOMMAND_LENGTH)
                 irc.reply(message, prefixNick = False)
                 return
             conn.rcon = source
-            logMessage = '<RCON> Nick: %s command: %s' % (msg.nick, command)
+            logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
             conn.logger.info(logMessage)
             conn.send_packet(AdminRcon, command = command)
 
@@ -364,7 +390,8 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        text = 'Now playing on %s (Version %s)' % (conn.serverinfo.name, conn.serverinfo.version)
+        text = 'Now playing on %s (Version %s)' % (
+            conn.serverinfo.name, conn.serverinfo.version)
         utils.msgChannel(irc, conn.channel, text)
         logMessage = '-' * 80
         conn.logger.info(logMessage)
@@ -379,7 +406,8 @@ class Soap(callbacks.Plugin):
         if conn == None or isinstance(client, (long, int)):
             return
         irc = conn.irc
-        logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (client.name, client.hostname, client.id)
+        logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (
+            client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
         welcome = self.registryValue('welcomeMessage', conn.channel)
 
@@ -404,7 +432,8 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if 'name' in changed:
-            logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (old.name, client.name, client.hostname)
+            logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (
+                old.name, client.name, client.hostname)
             conn.logger.info(logMessage)
 
     def _rcvClientQuit(self, connChan, client, errorcode):
@@ -413,7 +442,8 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (client.name, client.hostname, client.id)
+        logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
+            client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
@@ -439,8 +469,10 @@ class Soap(callbacks.Plugin):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
-                    logMessage = '<NAMECHANGE> Old Name: \'%s\' New Name: \'%s\' (Host: %s)' % (clientName, newName, client.hostname)
-                    text = '*** %s has changed his/her name to %s' % (clientName, newName)
+                    logMessage = '<NAMECHANGE> Old Name: \'%s\' New Name: \'%s\' (Host: %s)' % (
+                        clientName, newName, client.hostname)
+                    text = '*** %s has changed his/her name to %s' % (
+                        clientName, newName)
                     conn.logger.info(logMessage)
                     utils.msgChannel(irc, conn.channel, text)
                     command = 'client_name %s %s' % (clientID, newName)
@@ -480,6 +512,27 @@ class Soap(callbacks.Plugin):
                 command = 'quit'
                 conn.send_packet(AdminRcon, command = command)
             return
+        elif conn.rcon == RconSpecial.UPDATESAVED:
+            if result.startswith('Map successfully saved'):
+                message = 'Shutting down server to finish update. We\'ll be back shortly'
+                utils.msgChannel(irc, conn.channel, message)
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT,
+                    destType = DestType.BROADCAST,
+                    clientID = ClientID.SERVER,
+                    message = message)
+                conn.connectionstate = ConnectionState.SHUTDOWN
+                command = 'quit'
+                conn.send_packet(AdminRcon, command = command)
+
+                ofsCommand = 'ofs-svntobin.py'
+                successText = 'Update finished'
+                cmdThread = threading.Thread(
+                    target = self._commandThread,
+                    args = [conn, irc, ofsCommand, successText, 15])
+                cmdThread.daemon = True
+                cmdThread.start()
+            return
         utils.msgChannel(irc, conn.rcon, result)
 
     def _rcvConsole(self, connChan, origin, message):
@@ -488,7 +541,8 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        if message.startswith('Game Load Failed') or message.startswith('ERROR: Game Load Failed'):
+        if (message.startswith('Game Load Failed') or
+                message.startswith('ERROR: Game Load Failed')):
             ircMessage = message.replace("\n", ", ")
             ircMessage = ircMessage.replace("?", ", ")
             utils.msgChannel(irc, conn.channel, ircMessage)
@@ -696,9 +750,7 @@ class Soap(callbacks.Plugin):
 
         irc.reply('Shutting down server...', prefixNick = False)
         conn.rcon = RconSpecial.SHUTDOWNSAVED
-        gamedir = self.registryValue('gamedir', conn.channel)
-        autosave = os.path.join(gamedir, 'save/autosave/autosavesoap')
-        command = 'save %s' % autosave
+        command = 'save autosave/autosavesoap'
         conn.send_packet(AdminRcon, command = command)
     shutdown = wrap(shutdown, [optional('text')])
 
@@ -735,7 +787,8 @@ class Soap(callbacks.Plugin):
             return
         minPlayers = self.registryValue('minPlayers', conn.channel)
         if minPlayers > 0:
-            command = 'set min_active_clients %s' % self.registryValue('minPlayers', conn.channel)
+            command = 'set min_active_clients %s' % self.registryValue(
+                'minPlayers', conn.channel)
             conn.send_packet(AdminRcon, command = command)
         command = 'unpause'
         conn.send_packet(AdminRcon, command = command)
@@ -832,7 +885,8 @@ class Soap(callbacks.Plugin):
                 return
             customUrl = self.registryValue('downloadUrl', conn.channel)
             if customUrl == 'None':
-                url = utils.generateDownloadUrl(irc, conn.serverinfo.version, osType)
+                url = utils.generateDownloadUrl(
+                    irc, conn.serverinfo.version, osType)
             else:
                 url = customUrl
         if not url == None:
@@ -840,7 +894,8 @@ class Soap(callbacks.Plugin):
         else:
             irc.reply('Couldn\'t decipher download url')
     download = wrap(download, [optional(('literal',
-        ['autostart', 'autottd', 'lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])), optional('text')])
+        ['autostart', 'autottd', 'lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
+        optional('text')])
 
 
 
@@ -935,10 +990,6 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        if conn.connectionstate == ConnectionState.CONNECTED:
-            irc.reply('The server is currently up. In order to update, please shut it down first.',
-                prefixNick = False)
-            return
         irc.reply('Starting update...', prefixNick = False)
         ofsCommand = 'ofs-svnupdate.py'
         successText = 'Game successfully updated'

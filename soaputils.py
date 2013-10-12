@@ -46,6 +46,7 @@ def disconnect(conn, forced):
 
 def generateDownloadUrl(irc, version, osType = None):
     stable = '\d\.\d\.\d'
+    testing = '\d\.\d\.\d-rc\d'
     trunk = 'r\d{5}'
 
     if osType == None:
@@ -53,7 +54,7 @@ def generateDownloadUrl(irc, version, osType = None):
         irc.reply('%sdownload autostart|autottd|lin|lin64|osx|ottdau|source|win32|win64|win9x'
             % actionChar)
         url = 'http://www.openttd.org/en/'
-        if re.match(stable, version):
+        if re.match(stable, version) or re.match(testing, version):
             url += 'download-stable/%s' % version
         elif re.match(trunk, version):
             url += 'download-trunk/%s' % version
