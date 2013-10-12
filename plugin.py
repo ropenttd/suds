@@ -991,6 +991,13 @@ class Soap(callbacks.Plugin):
             return
 
         irc.reply('Starting update...', prefixNick = False)
+        if conn.connectionstate = ConnectionState.CONNECTED:
+            message = 'Server is being updated, and will shut down in a bit...'
+            conn.send_packet(AdminChat,
+                action = Action.CHAT,
+                destType = DestType.BROADCAST,
+                clientID = ClientID.SERVER,
+                message = message)
         ofsCommand = 'ofs-svnupdate.py'
         successText = 'Game successfully updated'
         cmdThread = threading.Thread(
