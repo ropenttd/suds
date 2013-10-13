@@ -214,29 +214,29 @@ class Soap(callbacks.Plugin):
             commandObject = Popen(command, shell=useshell, stdout = PIPE)
         except OSError as e:
             irc.reply('Couldn\'t start %s, Please review plugins.Soap.ofslocation'
-                % ofscommand.split()[0])
+                % ofsCommand.split()[0])
             return
         output = commandObject.stdout.read()
         commandObject.stdout.close()
         commandObject.wait()
+        for line in output.splitlines():
+            self.log.info('%s output: %s' % (ofsCommand.split()[0], line))
         if commandObject.returncode:
-            for line in output.splitlines():
-                self.log.info('%s output: %s' % (ofscommand.split()[0], line))
             irc.reply('%s reported an error, exitcode: %s. See bot-log for more information.'
-                % (ofscommand.split()[0], commandObject.returncode))
+                % (ofsCommand.split()[0], commandObject.returncode))
             return
         if successText:
-            irc.reply(successText, prefixnick = False)
+            irc.reply(successText, prefixNick = False)
 
-        if ofscommand.startswith('ofs-svnupdate.py'):
+        if ofsCommand.startswith('ofs-svnupdate.py'):
             irc.reply('Update successfull, shutting down server...',
                 prefixNick = False)
             conn.rcon = RconSpecial.UPDATESAVED
             rconcommand = 'save autosave/autosavesoap'
             conn.send_packet(AdminRcon, command = rconcommand)
-        elif ofscommand.startswith('ofs-svntobin.py'):
+        elif ofsCommand.startswith('ofs-svntobin.py'):
             ofsCommand = 'ofs-start.py'
-            successText = 'Server is starting...'
+            successText = 'Server is starting'
             cmdThread = threading.Thread(
                 target = self._commandThread,
                 args = [conn, irc, ofsCommand, successText])
@@ -501,6 +501,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
+        self.log.info('conn.rcon: %s result: %s' % (str(conn.rcon), result))
         if conn == None or conn.rcon == RconSpecial.SILENT:
             return
         irc = conn.irc
@@ -526,7 +527,7 @@ class Soap(callbacks.Plugin):
                 conn.send_packet(AdminRcon, command = command)
 
                 ofsCommand = 'ofs-svntobin.py'
-                successText = 'Update finished'
+                successText = None
                 cmdThread = threading.Thread(
                     target = self._commandThread,
                     args = [conn, irc, ofsCommand, successText, 15])

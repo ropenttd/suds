@@ -100,9 +100,12 @@ Commands:
  unpause*           - manually unpauses the game (sets min_active_clients to 0)
  auto*              - turns on autopause, and re-sets min_active_clients to the
                        configured amount
- getsave*^          - download savegame from url
  rcon*              - sends an rcon command to the server
+
+ getsave*^          - download savegame from url
  start*^            - starts OpenTTD dedicated server
+ update*^           - updates the OpenTTD server and (re)starts it
+
  clients            - lists the clients connected to the server
  companies          - lists companies
  date               - returns the ingame date
@@ -114,7 +117,8 @@ Commands:
  be handy when you want to command a server from a different channel or from
  private message.
  Commands marked with * require being opped or trusted (depending on allowOps).
- Commands marked with ^ only work if the server's local setting is True.
+ Commands marked with ^ require ofs installed at the server and also a valid
+ ofslocation setting.
 
  There are also 2 ingame commands:
  !admin             - sends a message to irc requesting admins look at the server
