@@ -131,7 +131,7 @@ class Soap(callbacks.Plugin):
         if conn == None:
             return
 
-        conn.connectionstate = ConnectionState.CONNECTED
+        conn.connectionstate = ConnectionState.AUTHENTICATING
         pwInterval = self.registryValue('passwordInterval', connChan)
         if pwInterval != 0:
             pwThread = threading.Thread(
@@ -158,6 +158,8 @@ class Soap(callbacks.Plugin):
         try:
             self._pollObj.unregister(fileno)
         except KeyError:
+            pass
+        except IOError:
             pass
 
         if conn.serverinfo.name != None:
@@ -312,7 +314,7 @@ class Soap(callbacks.Plugin):
         elif utils.checkPermission(irc, msg, conn.channel, allowOps):
             return (source, conn)
         else:
-            return (None, 'Denied')
+            return (None, None)
 
     def _ircRcon(self, irc, msg, args, command):
         source = msg.args[0].lower()
@@ -390,6 +392,7 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
+        conn.connectionstate = ConnectionState.CONNECTED
         text = 'Now playing on %s (Version %s)' % (
             conn.serverinfo.name, conn.serverinfo.version)
         utils.msgChannel(irc, conn.channel, text)
@@ -969,8 +972,6 @@ class Soap(callbacks.Plugin):
             irc.reply('I am connected to %s, so it\'s safe to assume that its already running'
                 % conn.serverinfo.name, prefixNick = False)
             return
-        text = 'Starting server...'
-        irc.reply(text, prefixNick = False)
 
         ofsCommand = 'ofs-start.py'
         successText = 'Server is starting...'
