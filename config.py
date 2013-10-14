@@ -95,7 +95,7 @@ conf.registerChannelValue(Soap, 'passwordInterval',
     passwords, leave this set at 0. People can use the password command to find
     the current password """))
 conf.registerChannelValue(Soap, 'welcomeMessage',
-    SemicolonSeparatedListOfStrings('None', """ Welcome message to be sent to
+    SemicolonSeparatedListOfStrings('', """ Welcome message to be sent to
     players when they connect. Separate lines with semicolons. to insert (for
     instance) the client name, put {clientname} in the string, including the {}.
     Valid replacements are: {clientname} {servername} and {serverversion}. Set
