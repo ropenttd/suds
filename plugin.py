@@ -132,7 +132,7 @@ class Soap(callbacks.Plugin):
             return
 
         conn.connectionstate = ConnectionState.AUTHENTICATING
-        pwInterval = self.registryValue('passwordInterval', connChan)
+        pwInterval = self.registryValue('passwordInterval', conn.channel)
         if pwInterval != 0:
             pwThread = threading.Thread(
                 target = self._passwordThread,
@@ -164,7 +164,7 @@ class Soap(callbacks.Plugin):
 
         if conn.serverinfo.name != None:
             text = 'Disconnected from %s' % (conn.serverinfo.name)
-            utils.msgChannel(conn.irc, connChan, text)
+            utils.msgChannel(conn.irc, conn.channel, text)
             conn.serverinfo.name = None
             logMessage = '<DISCONNECTED>'
             conn.logger.info(logMessage)
@@ -316,43 +316,33 @@ class Soap(callbacks.Plugin):
         else:
             return (None, None)
 
-    def _ircRcon(self, irc, msg, args, command):
+    def _ircRconInit(self, irc, msg, parameters, needsPermission):
         source = msg.args[0].lower()
         if source == irc.nick.lower():
             source = msg.nick
-        serverID = None
-        firstWord = command.partition(' ')[0]
-        conns = []
+        conn = None
+        firstWord = parameters.partition(' ')[0]
+        remainder = parameters.partition(' ')[2]
         for c in self.connections.itervalues():
-            conns.append(c.channel)
-            conns.append(c.ID)
-        if firstWord in conns:
-            serverID = firstWord
-            command = command.partition(' ')[2]
+            if firstWord == c.channel or firstWord == c.ID:
+                conn = c
+                command = remainder
 
-        conn = utils.getConnection(
-            self.connections, self.channels, source, serverID)
-        if conn == None:
-            return
+        if not conn:
+            conn = utils.getConnection(
+                self.connections, self.channels, source)
+            if conn == None:
+                self.log.info('no conn found, returning none none')
+                return (None, None, None)
+            command = parameters
         allowOps = self.registryValue('allowOps', conn.channel)
 
-        if utils.checkPermission(irc, msg, conn.channel, allowOps):
-            if conn.connectionstate != ConnectionState.CONNECTED:
-                irc.reply('Not connected!!', prefixNick = False)
-                return
-            if conn.rcon != RconSpecial.SILENT:
-                message = 'Sorry, still processing previous rcon command'
-                irc.reply(message, prefixNick = False)
-                return
-            if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
-                message = "RCON Command too long (%d/%d)" % (
-                    len(command), NETWORK_RCONCOMMAND_LENGTH)
-                irc.reply(message, prefixNick = False)
-                return
-            conn.rcon = source
-            logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
-            conn.logger.info(logMessage)
-            conn.send_packet(AdminRcon, command = command)
+        if not needsPermission:
+            return (source, conn, command)
+        elif utils.checkPermission(irc, msg, conn.channel, allowOps):
+            return (source, conn, command)
+        else:
+            return (None, None, None)
 
 
 
@@ -405,10 +395,11 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
 
     def _rcvClientJoin(self, connChan, client):
-        conn = self.connections.get(connChan)
         if conn == None or isinstance(client, (long, int)):
+            self.log.info('received event, conn == None or client is a number')
             return
         irc = conn.irc
+
         logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (
             client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
@@ -441,7 +432,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvClientQuit(self, connChan, client, errorcode):
         conn = self.connections.get(connChan)
-        if conn == None or isinstance(client, (int, long)):
+        if conn == None:
             return
         irc = conn.irc
 
@@ -719,24 +710,30 @@ class Soap(callbacks.Plugin):
             irc.reply(message, prefixNick = False)
     clients = wrap(clients, [optional('text')])
 
-    def rcon(self, irc, msg, args, command):
+    def rcon(self, irc, msg, args, parameters):
         """ [Server ID or channel] <rcon command>
 
         sends a rcon command to the [specified] openttd server
         """
 
-        self._ircRcon(irc, msg, args, command)
+        source, conn, command = self._ircRconInit(irc, msg, parameters, True)
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.rcon != RconSpecial.SILENT:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
+            return
+        if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
+            message = "RCON Command too long (%d/%d)" % (
+                len(command), NETWORK_RCONCOMMAND_LENGTH)
+            irc.reply(message, prefixNick = False)
+            return
+        conn.rcon = source
+        logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
+        conn.logger.info(logMessage)
+        conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
-
-    def content(self, irc, msg, args, command):
-        """ [Server ID or channel] <content command>
-
-        sends a rcon content command to the [specified] openttd server
-        """
-
-        command = 'content ' + command
-        self._ircRcon(irc, msg, args, command)
-    content = wrap(content, ['text'])
 
     def shutdown(self, irc, msg, args, serverID):
         """ [Server ID or channel]
