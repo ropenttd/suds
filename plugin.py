@@ -82,7 +82,7 @@ class Soap(callbacks.Plugin):
         conn = None
         if msg.nick == irc.nick and self.channels.count(channel) >=1:
             conn = self.connections.get(channel)
-            if conn == None:
+            if not conn:
                 return
             if conn.connectionstate == ConnectionState.CONNECTED:
                 text = 'Connected to %s (Version %s)' % (
@@ -115,7 +115,7 @@ class Soap(callbacks.Plugin):
 
     def _connectOTTD(self, irc, conn, source = None, text = 'Connecting...'):
         utils.msgChannel(irc, conn.channel, text)
-        if source != conn.channel and source != None:
+        if source and not source == conn.channel:
             utils.msgChannel(irc, source, text)
         conn = utils.refreshConnection(
             self.connections, self.registeredConnections, conn)
@@ -128,7 +128,7 @@ class Soap(callbacks.Plugin):
 
     def _connected(self, connChan):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
 
         conn.connectionstate = ConnectionState.AUTHENTICATING
@@ -146,7 +146,7 @@ class Soap(callbacks.Plugin):
 
     def _disconnected(self, connChan, canRetry):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
         fileno = conn.filenumber
@@ -162,7 +162,7 @@ class Soap(callbacks.Plugin):
         except IOError:
             pass
 
-        if conn.serverinfo.name != None:
+        if conn.serverinfo.name:
             text = 'Disconnected from %s' % (conn.serverinfo.name)
             utils.msgChannel(conn.irc, conn.channel, text)
             conn.serverinfo.name = None
@@ -276,7 +276,7 @@ class Soap(callbacks.Plugin):
                 events = self._pollObj.poll(timeout * POLL_MOD)
                 for fileno, event in events:
                     conn = self.registeredConnections.get(fileno)
-                    if conn == None:
+                    if not conn:
                         continue
                     if (event & POLLIN) or (event & POLLPRI):
                         packet = conn.recv_packet()
@@ -304,8 +304,7 @@ class Soap(callbacks.Plugin):
             source = msg.nick
         conn = utils.getConnection(
             self.connections, self.channels, source, serverID)
-        if conn == None:
-            self.log.info('no conn found, returning none none')
+        if not conn:
             return (None, None)
         allowOps = self.registryValue('allowOps', conn.channel)
 
@@ -316,27 +315,27 @@ class Soap(callbacks.Plugin):
         else:
             return (None, None)
 
-    def _ircRconInit(self, irc, msg, parameters, needsPermission):
+    def _ircRconInit(self, irc, msg, firstWord, remainder, command, needsPermission):
+        if not remainder:
+            remainder = ''
         source = msg.args[0].lower()
         if source == irc.nick.lower():
             source = msg.nick
         conn = None
-        firstWord = parameters.partition(' ')[0]
-        remainder = parameters.partition(' ')[2]
         for c in self.connections.itervalues():
-            if firstWord == c.channel or firstWord == c.ID:
+            if (firstWord.lower() == c.channel.lower()
+                    or firstWord.lower() == c.ID.lower()):
                 conn = c
-                command = remainder
+                command += remainder
 
         if not conn:
+            command += (firstWord + remainder)
             conn = utils.getConnection(
                 self.connections, self.channels, source)
-            if conn == None:
-                self.log.info('no conn found, returning none none')
+            if not conn:
                 return (None, None, None)
-            command = parameters
-        allowOps = self.registryValue('allowOps', conn.channel)
 
+        allowOps = self.registryValue('allowOps', conn.channel)
         if not needsPermission:
             return (source, conn, command)
         elif utils.checkPermission(irc, msg, conn.channel, allowOps):
@@ -350,7 +349,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvShutdown(self, connChan):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -362,7 +361,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvNewGame(self, connChan):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -378,7 +377,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvNewMap(self, connChan, mapinfo, serverinfo):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -395,8 +394,8 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
 
     def _rcvClientJoin(self, connChan, client):
-        if conn == None or isinstance(client, (long, int)):
-            self.log.info('received event, conn == None or client is a number')
+        if not conn or isinstance(client, (long, int)):
+            self.log.info('received event, not conn or client is a number')
             return
         irc = conn.irc
 
@@ -405,7 +404,7 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
         welcome = self.registryValue('welcomeMessage', conn.channel)
 
-        if welcome != None:
+        if welcome:
             replacements = {
                 '{clientname}':client.name,
                 '{servername}': conn.serverinfo.name,
@@ -421,7 +420,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvClientUpdate(self, connChan, old, client, changed):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -432,7 +431,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvClientQuit(self, connChan, client, errorcode):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -442,7 +441,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -496,7 +495,7 @@ class Soap(callbacks.Plugin):
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
         self.log.info('conn.rcon: %s result: %s' % (str(conn.rcon), result))
-        if conn == None or conn.rcon == RconSpecial.SILENT:
+        if not conn or conn.rcon == RconSpecial.SILENT:
             return
         irc = conn.irc
 
@@ -532,7 +531,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -548,7 +547,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvCmdLogging(self, connChan, frame, param1, param2, tile, text, company, commandID, clientID):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
 
         if clientID == 1:
@@ -557,7 +556,7 @@ class Soap(callbacks.Plugin):
             client = conn.clients.get(clientID)
             name = client.name
         commandName = conn.commands.get(commandID)
-        if commandName == None:
+        if not commandName:
             commandName = commandID
         logMessage = '<COMMAND> Frame: %s Name: \'%s\' Command: %s Tile: %s Param1: %s Param2: %s Text: \'%s\'' % (
             frame, name, commandName, tile, param1, param2, text)
@@ -566,7 +565,7 @@ class Soap(callbacks.Plugin):
 
     def _rcvPong(self, connChan, start, end, delta):
         conn = self.connections.get(connChan)
-        if conn == None:
+        if not conn:
             return
         irc = conn.irc
 
@@ -584,7 +583,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate == ConnectionState.CONNECTED:
@@ -607,7 +606,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate == ConnectionState.CONNECTED:
@@ -624,7 +623,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -641,7 +640,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -653,7 +652,7 @@ class Soap(callbacks.Plugin):
                 continue
             comp = None
             comp = conn.companies.get(i)
-            if comp == None:
+            if comp:
                 return
             companies = True
             if comp.economy.money >= 0:
@@ -682,7 +681,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -690,9 +689,8 @@ class Soap(callbacks.Plugin):
             return
         clients = False
         for i in conn.clients:
-            client = None
             client = conn.clients.get(i)
-            if client == None:
+            if not client:
                 return
             elif client.name == '':
                 continue
@@ -716,7 +714,11 @@ class Soap(callbacks.Plugin):
         sends a rcon command to the [specified] openttd server
         """
 
-        source, conn, command = self._ircRconInit(irc, msg, parameters, True)
+        command = ''
+        (firstWord, dummy, remainder) = parameters.partition(' ')
+        (source, conn, command) = self._ircRconInit(irc, msg, firstWord, remainder, command, True)
+        if not conn:
+            return
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
@@ -742,7 +744,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -762,7 +764,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -780,7 +782,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -802,7 +804,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -821,7 +823,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
@@ -837,7 +839,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         text = self.registryValue('publicAddress', conn.channel)
@@ -851,13 +853,13 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        if conn.clientPassword == None:
+        if not conn.clientPassword:
             irc.reply('Free entry, no passwords needed')
         else:
             irc.reply(conn.clientPassword)
@@ -870,7 +872,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if conn == None:
+        if not conn:
             return
 
         url = None
@@ -910,7 +912,7 @@ class Soap(callbacks.Plugin):
         source = source.lower()
         if irc.isChannel(source) and source in self.channels:
             conn = self.connections.get(source)
-        if conn == None:
+        if not conn:
             return
         if conn.connectionstate != ConnectionState.CONNECTED:
             return
@@ -941,7 +943,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         if saveUrl[-4:] == '.sav':
@@ -963,7 +965,7 @@ class Soap(callbacks.Plugin):
         Starts the specified server. Only available if plugins.Soap.local is True
         """
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
         if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('I am connected to %s, so it\'s safe to assume that its already running'
@@ -986,7 +988,7 @@ class Soap(callbacks.Plugin):
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
-        if conn == None:
+        if not conn:
             return
 
         irc.reply('Starting update...', prefixNick = False)
