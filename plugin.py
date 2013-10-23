@@ -633,81 +633,6 @@ class Soap(callbacks.Plugin):
         irc.reply(message, prefixNick = False)
     date = wrap(date, [optional('text')])
 
-    def companies(self, irc, msg, args, serverID):
-        """ [Server ID or channel]
-
-        display the companies on the [specified] server
-        """
-
-        source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if not conn:
-            return
-
-        if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
-            return
-        companies = False
-        for i in conn.companies:
-            if i == 255:
-                continue
-            comp = None
-            comp = conn.companies.get(i)
-            if comp:
-                return
-            companies = True
-            if comp.economy.money >= 0:
-                fortune = 'Fortune: %s' % comp.economy.money
-            else:
-                fortune = 'Debt: %s' % comp.economy.money
-            if comp.economy.currentLoan > 0:
-                loan = ', Loan: %s' % comp.economy.currentLoan
-            else:
-                loan = ''
-            vehicles = 'Vehicles (T: %s R: %s S: %s P: %s)' % (
-                comp.vehicles.train, comp.vehicles.lorry + comp.vehicles.bus,
-                comp.vehicles.ship, comp.vehicles.plane)
-            message = "#%s Name '%s' Established %s, %s%s, %s" % (
-                comp.id+1, comp.name, comp.startyear, fortune, loan, vehicles)
-            irc.reply(message, prefixNick = False)
-        if not companies:
-            message = 'No companies'
-            irc.reply(message, prefixNick = False)
-    companies = wrap(companies, [optional('text')])
-
-    def clients(self, irc, msg, args, serverID):
-        """ [Server ID or channel]
-
-        display the companies on the [specified] server
-        """
-
-        source, conn = self._ircCommandInit(irc, msg, serverID, False)
-        if not conn:
-            return
-
-        if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
-            return
-        clients = False
-        for i in conn.clients:
-            client = conn.clients.get(i)
-            if not client:
-                return
-            elif client.name == '':
-                continue
-            clients = True
-            if client.play_as == 255:
-                companyName = 'Spectating'
-            else:
-                company = conn.companies.get(client.play_as)
-                companyName = "Company: '%s'" % company.name
-            message = "Client #%s, Name: '%s' %s" % (
-                client.id, client.name, companyName)
-            irc.reply(message, prefixNick = False)
-        if not clients:
-            message = 'No clients connected'
-            irc.reply(message, prefixNick = False)
-    clients = wrap(clients, [optional('text')])
-
     def rcon(self, irc, msg, args, parameters):
         """ [Server ID or channel] <rcon command>
 
@@ -868,7 +793,8 @@ class Soap(callbacks.Plugin):
     def download(self, irc, msg, args, osType, serverID):
         """ [OS type/program] [Server ID or channel]
 
-        Returns the url to download the client for the current game. Also links to some starter programs
+        Returns the url to download the client for the current game. Also links
+        to some starter programs
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
@@ -899,7 +825,6 @@ class Soap(callbacks.Plugin):
     download = wrap(download, [optional(('literal',
         ['autostart', 'autottd', 'lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
         optional('text')])
-
 
 
 
