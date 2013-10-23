@@ -792,6 +792,33 @@ class Soap(callbacks.Plugin):
             irc.reply(conn.clientPassword)
     password = wrap(password, [optional('text')])
 
+    def playercount(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Tells you the number of players and spectators on the server at this moment
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        clients = len(conn.clients)
+        if conn.serverinfo.dedicated:
+            clients -= 1 # deduct server-client for dedicated servers
+        players = 0
+        for clientID, client in conn.clients.items():
+            if not client.play_as == 255:
+                players += 1
+        spectators = clients - players
+        text = 'There are currently %d players and %d spectators,'\
+            'making a total of %d clients connected' % (
+            (players, spectators, clients))
+        irc.reply(text)
+    playercount = wrap(playercount, [optional('text')])
+
     def download(self, irc, msg, args, osType, serverID):
         """ [OS type/program] [Server ID or channel]
 
