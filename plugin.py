@@ -394,6 +394,7 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
 
     def _rcvClientJoin(self, connChan, client):
+        conn = self.connections.get(connChan)
         if not conn or isinstance(client, (long, int)):
             self.log.info('received event, not conn or client is a number')
             return
@@ -435,8 +436,9 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
-        logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
-            client.name, client.hostname, client.id)
+        if not isinstance(client, (long, int)):
+            logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
+                client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
