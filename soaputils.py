@@ -26,6 +26,7 @@ import re
 import urllib2
 
 from enums import *
+from libottdadmin2.enums import Colour
 
 def checkPermission(irc, msg, channel, allowOps):
     capable = ircdb.checkCapability(msg.prefix, 'trusted')
@@ -87,6 +88,28 @@ def generateDownloadUrl(irc, version, osType = None):
                 url = None
     return url
 
+def getColourNameFromNumber(number):
+    colours = {
+        Colour.COLOUR_DARK_BLUE    : 'Dark Blue',
+        Colour.COLOUR_PALE_GREEN   : 'Pale Green',
+        Colour.COLOUR_PINK         : 'Pink',
+        Colour.COLOUR_YELLOW       : 'Yellow',
+        Colour.COLOUR_RED          : 'Red',
+        Colour.COLOUR_LIGHT_BLUE   : 'Light Blue',
+        Colour.COLOUR_GREEN        : 'Green',
+        Colour.COLOUR_DARK_GREEN   : 'Dark Green',
+        Colour.COLOUR_BLUE         : 'Blue',
+        Colour.COLOUR_CREAM        : 'Cream',
+        Colour.COLOUR_MAUVE        : 'Mauve',
+        Colour.COLOUR_PURPLE       : 'Purple',
+        Colour.COLOUR_ORANGE       : 'Orange',
+        Colour.COLOUR_BROWN        : 'Brown',
+        Colour.COLOUR_GREY         : 'Grey',
+        Colour.COLOUR_WHITE        : 'White',
+    }
+    colourName = colours.get(number, number)
+    return colourName
+
 def getConnection(connections, channels, source, serverID = None):
     conn = None
 
@@ -141,3 +164,4 @@ def refreshConnection(connections, registeredConnections, conn):
     newconn = conn.copy()
     connections[conn.channel] = newconn
     return newconn
+    

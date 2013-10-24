@@ -439,7 +439,7 @@ class Soap(callbacks.Plugin):
         if not isinstance(client, (long, int)):
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
                 client.name, client.hostname, client.id)
-        conn.logger.info(logMessage)
+            conn.logger.info(logMessage)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
@@ -792,6 +792,73 @@ class Soap(callbacks.Plugin):
             irc.reply(conn.clientPassword)
     password = wrap(password, [optional('text')])
 
+    def companies(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Show a list of players currently playing
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        if conn.companies.values():
+            for company in conn.companies.values():
+                if not company.id == 255:
+                    companyColour = utils.getColourNameFromNumber(company.colour)
+                    text = 'Company %d (%s): %s' % (company.id, companyColour, company.name)
+                    if company.ai:
+                        text = 'AI ' + text
+                    irc.reply(text)
+        else:
+            irc.reply('There are currently no companies in existence. '\
+                'I smell an opportunity...')
+    companies = wrap(companies, [optional('text')])
+
+    def players(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Show a list of players currently playing
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        spectators = []
+        players = []
+        for client in conn.clients.values():
+            if client.play_as == 255:
+                if conn.serverinfo.dedicated and client.id == 1:
+                    pass
+                else:
+                    spectators.append('Client %d (%s)' % (client.id, client.name))
+            else:
+                company = conn.companies.get(client.play_as)
+                companyColour = utils.getColourNameFromNumber(company.colour)
+                players.append('Client %d (%s) is %s, in company %s (%s)' %
+                    (client.id, companyColour, client.name, company.id,
+                    company.name))
+        spectators.sort()
+        players.sort()
+        for player in players:
+            irc.reply(player)
+        if spectators:
+            spectators = ', '.join(spectators)
+            irc.reply('Spectators: %s' % spectators)
+        if not players and not spectators:
+            irc.reply('The server is empty, noone is connected. '\
+                'Feel free to remedy this situation')
+    players = wrap(players, [optional('text')])
+
     def playercount(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
@@ -809,11 +876,11 @@ class Soap(callbacks.Plugin):
         if conn.serverinfo.dedicated:
             clients -= 1 # deduct server-client for dedicated servers
         players = 0
-        for clientID, client in conn.clients.items():
+        for client in conn.clients.values():
             if not client.play_as == 255:
                 players += 1
         spectators = clients - players
-        text = 'There are currently %d players and %d spectators,'\
+        text = 'There are currently %d players and %d spectators, '\
             'making a total of %d clients connected' % (
             (players, spectators, clients))
         irc.reply(text)
