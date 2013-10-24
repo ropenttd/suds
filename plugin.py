@@ -249,6 +249,15 @@ class Soap(callbacks.Plugin):
         pluginDir = os.path.dirname(__file__)
         pwFileName = os.path.join(pluginDir, 'passwords.txt')
 
+        # delay password changing untill connection is fully established,
+        # abort if it takes longer than 10 seconds
+        for second in range(10):
+            if conn.connectionstate == ConnectionState.CONNECTED:
+                break
+            time.sleep(1)
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            return
+
         while True:
             interval = self.registryValue('passwordInterval', conn.channel)
             if conn.connectionstate != ConnectionState.CONNECTED:
@@ -496,7 +505,6 @@ class Soap(callbacks.Plugin):
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
-        self.log.info('conn.rcon: %s result: %s' % (str(conn.rcon), result))
         if not conn or conn.rcon == RconSpecial.SILENT:
             return
         irc = conn.irc
