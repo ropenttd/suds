@@ -93,32 +93,32 @@ Configuration
 
 
 
-Commands:
- apconnect*         - connects to the preconfigured openttd server(*)
- apdisconnect*      - disconnects from same
- pause*             - manually pauses the game
- unpause*           - manually unpauses the game (sets min_active_clients to 0)
- auto*              - turns on autopause, and re-sets min_active_clients to the
-                       configured amount
- rcon*              - sends an rcon command to the server
+Op/Trusted-only commands:
+ apconnect      - connects to the preconfigured openttd server(*)
+ apdisconnect   - disconnects from same
+ pause          - manually pauses the game
+ unpause        - manually unpauses the game (sets min_active_clients to 0)
+ auto           - turns on autopause, and re-sets min_active_clients to the
+                    configured amount
+ rcon           - sends an rcon command to the server
 
- getsave*^          - download savegame from url
- start*^            - starts OpenTTD dedicated server
- update*^           - updates the OpenTTD server and (re)starts it
+Commands requiring op/trusted and OFS installed 
+ getsave        - download savegame from url
+ start          - starts OpenTTD dedicated server
+ update         - updates the OpenTTD server and (re)starts it
 
- clients            - lists the clients connected to the server
- companies          - lists companies
- date               - returns the ingame date
- ding               - should be ping, but that command was taken. Dings the server
- ip                 - Replies with the address needed to join the server as a player
- password           - shows the current password needed to join the server
+Publicly available commands
+ playercount    - Shows how many people are playing
+ players        - lists the clients connected to the server
+ companies      - lists companies
+ date           - returns the ingame date
+ ding           - should be ping, but that command was taken. Dings the server
+ ip             - Replies with the address needed to join the server as a player
+ password       - shows the current password needed to join the server
 
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
  private message.
- Commands marked with * require being opped or trusted (depending on allowOps).
- Commands marked with ^ require ofs installed at the server and also a valid
- ofslocation setting.
 
  There are also 2 ingame commands:
  !admin             - sends a message to irc requesting admins look at the server
