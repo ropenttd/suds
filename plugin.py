@@ -335,10 +335,16 @@ class Soap(callbacks.Plugin):
             if (firstWord.lower() == c.channel.lower()
                     or firstWord.lower() == c.ID.lower()):
                 conn = c
-                command += remainder
+                if command:
+                    command += ' %s' % remainder
+                else:
+                    command = remainder
 
         if not conn:
-            command += (firstWord + remainder)
+            if command:
+                command += ' %s %s' % (firstWord, remainder)
+            else:
+                command = '%s %s' % (firstWord, remainder)
             conn = utils.getConnection(
                 self.connections, self.channels, source)
             if not conn:
