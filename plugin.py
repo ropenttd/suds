@@ -822,7 +822,7 @@ class Soap(callbacks.Plugin):
             for company in conn.companies.values():
                 if not company.id == 255:
                     companyColour = utils.getColourNameFromNumber(company.colour)
-                    text = 'Company %d (%s): %s' % (company.id, companyColour, company.name)
+                    text = 'Company %d (%s): %s' % (company.id+1, companyColour, company.name)
                     if company.ai:
                         text = 'AI ' + text
                     irc.reply(text)
