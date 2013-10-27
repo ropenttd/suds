@@ -416,6 +416,7 @@ class Soap(callbacks.Plugin):
             return
         irc = conn.irc
 
+        text = '*** %s has joined' % client.name
         logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (
             client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
@@ -442,6 +443,9 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if 'name' in changed:
+            text = '*** %s has changed his/her name to %s' % (
+                old.name, client.name)
+            utils.msgChannel(conn.irc, conn.channel, text)
             logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (
                 old.name, client.name, client.hostname)
             conn.logger.info(logMessage)
@@ -453,6 +457,8 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if not isinstance(client, (long, int)):
+            text = '*** %s had left the game' % client.name
+            utils.msgChannel(irc, conn.channel, text)
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
                 client.name, client.hostname, client.id)
             conn.logger.info(logMessage)
@@ -493,20 +499,29 @@ class Soap(callbacks.Plugin):
                 utils.msgChannel(irc, conn.channel, text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             clientName = clientName.lower()
-            playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
-            if clientName.startswith('player') and not playAsPlayer:
-                utils.moveToSpectators(irc, conn, client)
 
             if not isinstance(client, (long, int)):
                 company = conn.companies.get(client.play_as)
                 if action == Action.COMPANY_JOIN:
+                    text = ('*** %s has joined company #%d' %
+                        (client.name, company.id+1))
                     joining = 'JOIN'
                 else:
+                    text = ('*** %s has started a new company #%d' %
+                        (client.name, company.id+1))
                     joining = 'NEW'
+
                 logMessage = '<COMPANY %s> Name: \'%s\' Company Name: \'%s\' Company ID: %s' % (
                     joining, clientName, company.name, company.id+1)
+                utils.msgChannel(irc, conn.channel, text)
                 conn.logger.info(logMessage)
+            
+            playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
+            if clientName.startswith('player') and not playAsPlayer:
+                utils.moveToSpectators(irc, conn, client)
         elif action == Action.COMPANY_SPECTATOR:
+            text = '*** %s has joined spectators' % clientName
+            utils.msgChannel(irc, conn.channel, text)
             logMessage = '<SPECTATOR JOIN> Name: \'%s\'' % clientName
             conn.logger.info(logMessage)
 
@@ -561,7 +576,7 @@ class Soap(callbacks.Plugin):
             utils.msgChannel(irc, conn.channel, ircMessage)
         else:
             ircMessage = message[3:]
-            if ircMessage.startswith('***'):
+            if ircMessage.startswith('***') and 'paused' in ircMessage:
                 utils.msgChannel(irc, conn.channel, ircMessage)
 
     def _rcvCmdLogging(self, connChan, frame, param1, param2, tile, text, company, commandID, clientID):
@@ -577,6 +592,10 @@ class Soap(callbacks.Plugin):
         commandName = conn.commands.get(commandID)
         if not commandName:
             commandName = commandID
+
+        if commandName == 'CmdPause':
+            pass
+
         logMessage = '<COMMAND> Frame: %s Name: \'%s\' Command: %s Tile: %s Param1: %s Param2: %s Text: \'%s\'' % (
             frame, name, commandName, tile, param1, param2, text)
         conn.logger.info(logMessage)
