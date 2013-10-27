@@ -148,6 +148,8 @@ class Soap(callbacks.Plugin):
         conn = self.connections.get(connChan)
         if not conn:
             return
+        if conn.is_connected:
+            return
         irc = conn.irc
         fileno = conn.filenumber
 
