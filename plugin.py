@@ -400,6 +400,9 @@ class Soap(callbacks.Plugin):
         text = 'Now playing on %s (Version %s)' % (
             conn.serverinfo.name, conn.serverinfo.version)
         utils.msgChannel(irc, conn.channel, text)
+        command = 'set min_active_clients %s' % self.registryValue(
+            'minPlayers', conn.channel)
+        conn.send_packet(AdminRcon, command = command)
         logMessage = '-' * 80
         conn.logger.info(logMessage)
         logMessage = '<CONNECTED> Version: %s, Name: \'%s\' Mapname: \'%s\' Mapsize: %dx%d' % (
