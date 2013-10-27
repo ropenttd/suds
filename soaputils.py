@@ -27,6 +27,7 @@ import urllib2
 
 from enums import *
 from libottdadmin2.enums import Colour
+from libottdadmin2.packets.admin import AdminRcon
 
 def checkPermission(irc, msg, channel, allowOps):
     capable = ircdb.checkCapability(msg.prefix, 'trusted')
@@ -113,15 +114,15 @@ def getColourNameFromNumber(number):
 def getConnection(connections, channels, source, serverID = None):
     conn = None
 
-    if serverID == None:
-        if ircutils.isChannel(source) and source in channels:
+    if not serverID:
+        if ircutils.isChannel(source) and source.lower in channels:
             conn = connections.get(source)
     else:
         if ircutils.isChannel(serverID):
             conn = connections.get(serverID)
         else:
             for c in connections.itervalues():
-                if c.ID.lower() == serverID.lower():
+                if c.ID == serverID.lower():
                     conn = c
     return conn
 
@@ -164,4 +165,3 @@ def refreshConnection(connections, registeredConnections, conn):
     newconn = conn.copy()
     connections[conn.channel] = newconn
     return newconn
-    

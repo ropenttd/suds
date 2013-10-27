@@ -168,8 +168,6 @@ class Soap(callbacks.Plugin):
             conn.serverinfo.name = None
             logMessage = '<DISCONNECTED>'
             conn.logger.info(logMessage)
-            logMessage = ' '
-            conn.logger.info(logMessage)
 
         if conn.connectionstate == ConnectionState.CONNECTED:
             # We didn't disconnect on purpose, set this so we will reconnect
@@ -401,8 +399,6 @@ class Soap(callbacks.Plugin):
             conn.serverinfo.name, conn.serverinfo.version)
         utils.msgChannel(irc, conn.channel, text)
         logMessage = '-' * 80
-        conn.logger.info(logMessage)
-        logMessage = ' '
         conn.logger.info(logMessage)
         logMessage = '<CONNECTED> Version: %s, Name: \'%s\' Mapname: \'%s\' Mapsize: %dx%d' % (
             conn.serverinfo.version, conn.serverinfo.name, conn.mapinfo.name, conn.mapinfo.x, conn.mapinfo.y)

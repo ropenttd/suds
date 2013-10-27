@@ -166,6 +166,14 @@ class SoapClient(TrackingAdminClient):
     _channel = None
 
     @property
+    def channel(self):
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value.lower()
+
+    @property
     def irc(self):
         return self._irc
 
@@ -179,7 +187,7 @@ class SoapClient(TrackingAdminClient):
 
     @ID.setter
     def ID(self, value):
-        self._ID = value
+        self._ID = value.lower()
 
     update_types = [
         (UpdateType.CLIENT_INFO,        UpdateFrequency.AUTOMATIC),

@@ -33,7 +33,7 @@ __author__ = supybot.Author('Taede Werkhoven', 'TWerkhoven', 't.werkhoven@turbul
 __contributors__ = {}
 
 # This is a url where the most recent plugin package can be downloaded.
-__url__ = '' # 'http://supybot.com/Members/yourname/OttdAdmin/download'
+__url__ = 'http://dev.openttdcoop.org/projects/soap/'
 
 import config
 import soaputils
