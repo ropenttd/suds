@@ -26,8 +26,8 @@ import re
 import urllib2
 
 from enums import *
-from libottdadmin2.enums import Colour
-from libottdadmin2.packets.admin import AdminRcon
+from libottdadmin2.enums import Colour, Action, DestType, ClientID
+from libottdadmin2.packets.admin import AdminRcon, AdminChat
 
 def checkPermission(irc, msg, channel, allowOps):
     capable = ircdb.checkCapability(msg.prefix, 'trusted')
