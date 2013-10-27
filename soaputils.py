@@ -148,6 +148,7 @@ def msgChannel(irc, channel, msg):
 def moveToSpectators(irc, conn, client):
     text = '%s: Please change your name before joining/starting a company' % client.name
     command = 'move %s 255' % client.id
+    conn.rcon = conn.channel
 
     conn.send_packet(AdminRcon, command = command)
     conn.send_packet(AdminChat,

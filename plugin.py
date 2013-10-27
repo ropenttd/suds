@@ -476,7 +476,7 @@ class Soap(callbacks.Plugin):
                     destType = DestType.BROADCAST,
                     clientID = ClientID.SERVER,
                     message = text)
-            elif message.startswith('!nick '):
+            elif message.startswith('!nick ') or message.startswith('!name '):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
@@ -504,7 +504,7 @@ class Soap(callbacks.Plugin):
                 else:
                     joining = 'NEW'
                 logMessage = '<COMPANY %s> Name: \'%s\' Company Name: \'%s\' Company ID: %s' % (
-                    joining, clientName, company.name, company.id)
+                    joining, clientName, company.name, company.id+1)
                 conn.logger.info(logMessage)
         elif action == Action.COMPANY_SPECTATOR:
             logMessage = '<SPECTATOR JOIN> Name: \'%s\'' % clientName
@@ -544,6 +544,8 @@ class Soap(callbacks.Plugin):
                 cmdThread.daemon = True
                 cmdThread.start()
             return
+        if result[3:].startswith('***'):
+            result = result[3:]
         utils.msgChannel(irc, conn.rcon, result)
 
     def _rcvConsole(self, connChan, origin, message):
@@ -860,7 +862,7 @@ class Soap(callbacks.Plugin):
                 company = conn.companies.get(client.play_as)
                 companyColour = utils.getColourNameFromNumber(company.colour)
                 players.append('Client %d (%s) is %s, in company %s (%s)' %
-                    (client.id, companyColour, client.name, company.id,
+                    (client.id, companyColour, client.name, company.id+1,
                     company.name))
         spectators.sort()
         players.sort()
