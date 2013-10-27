@@ -56,7 +56,7 @@ class Soap(callbacks.Plugin):
             conn = SoapClient(channel)
             self._attachEvents(conn)
             self._initSoapClient(conn, irc)
-            self.connections[channel] = conn
+            self.connections[channel.lower()] = conn
             if self.registryValue('autoConnect', channel):
                 self._connectOTTD(irc, conn, channel)
         self.stopPoll = threading.Event()

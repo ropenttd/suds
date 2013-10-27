@@ -115,7 +115,7 @@ def getConnection(connections, channels, source, serverID = None):
     conn = None
 
     if not serverID:
-        if ircutils.isChannel(source) and source.lower in channels:
+        if ircutils.isChannel(source) and source.lower() in channels:
             conn = connections.get(source)
     else:
         if ircutils.isChannel(serverID):
