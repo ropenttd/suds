@@ -21,7 +21,7 @@ from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
 from libottdadmin2.enums import UpdateType, UpdateFrequency
 
-from enums import RconSpecial, ConnectionState
+from enums import RconStatus, ConnectionState
 
 class SoapEvents(object):
     def __init__(self):
@@ -50,12 +50,11 @@ class SoapEvents(object):
 
         self.chat           = Event()
         self.rcon           = Event()
+        self.rconend        = Event()
         self.console        = Event()
         self.cmdlogging     = Event()
 
         self.pong           = Event()
-
-
 
 class SoapClient(TrackingAdminClient):
 
@@ -71,10 +70,14 @@ class SoapClient(TrackingAdminClient):
         self.logger = logging.getLogger('Soap-%s' % self.channel)
         self.logger.setLevel(logging.INFO)
 
-        self.rcon = RconSpecial.SILENT
+        self.rconNick = None
+        self.rconState = RconStatus.IDLE
+        self.rconResults = {}
+
         self.connectionstate = ConnectionState.DISCONNECTED
         self.registered = False
         self.filenumber = None
+
         self.clientPassword = None
 
     def _attachEvents(self):
@@ -143,7 +146,7 @@ class SoapClient(TrackingAdminClient):
         self.soapEvents.rcon(self.channel, result, colour)
 
     def _rcvRconEnd(self, command):
-        self.rcon = RconSpecial.SILENT
+        self.soapEvents.rconend(self.channel, command)
 
     def _rcvConsole(self, message, origin):
         self.soapEvents.console(self.channel, origin, message)

@@ -28,6 +28,14 @@ import urllib2
 from enums import *
 from libottdadmin2.enums import Colour, Action, DestType, ClientID
 from libottdadmin2.packets.admin import AdminRcon, AdminChat
+from libottdadmin2.trackingclient import MappingObject
+
+class RconResults(MappingObject):
+    _mapping = [
+        ('irc', 'irc'),
+        ('command', 'command'),
+        ('results', 'results'),
+    ]
 
 def checkPermission(irc, msg, channel, allowOps):
     capable = ircdb.checkCapability(msg.prefix, 'trusted')

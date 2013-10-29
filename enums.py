@@ -33,7 +33,9 @@ class PauseState(EnumHelper):
     PAUSED_ACTIVE_CLIENTS   = 0x10 # Pause for 'min_active_clients'
     PAUSED_GAMESCRIPT       = 0x20 # Paused by game script
 
-class RconSpecial(EnumHelper):
-    SILENT          = 0X00 # Keep it quiet, its a secret
-    SHUTDOWNSAVED   = 0x01 # game has been saved by the shutdown command
-    UPDATESAVED     = 0x02 # game has been saved prior to shutting down for update
+class RconStatus(EnumHelper):
+    IDLE            = 0x00 # We are not processing any rcon commands
+    ACTIVE          = 0x01 # We are awayting rcon results
+    CHANNEL         = 0x02 # Automatic rcon command has output for the channel
+    SHUTDOWNSAVED   = 0x03 # Game has been saved by the shutdown command, no output
+    UPDATESAVED     = 0x04 # Game has been saved prior to shutting down for update, no output

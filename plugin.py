@@ -18,15 +18,15 @@ from supybot.commands import *
 import supybot.conf as conf
 import supybot.callbacks as callbacks
 
+from datetime import datetime
 import os.path
+import Queue
 import random
 import socket
 from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import threading
 import time
-
-from datetime import datetime
 
 import soaputils as utils
 from soapclient import SoapClient
@@ -108,6 +108,7 @@ class Soap(callbacks.Plugin):
 
         conn.soapEvents.chat            += self._rcvChat
         conn.soapEvents.rcon            += self._rcvRcon
+        conn.soapEvents.rconend         += self._rcvRconEnd
         conn.soapEvents.console         += self._rcvConsole
         conn.soapEvents.cmdlogging      += self._rcvCmdLogging
 
@@ -141,6 +142,7 @@ class Soap(callbacks.Plugin):
             pwThread.start()
         else:
             command = 'set server_password *'
+            conn.rconState = RconStatus.ACTIVE
             conn.send_packet(AdminRcon, command = command)
             conn.clientPassword = None
 
@@ -233,7 +235,7 @@ class Soap(callbacks.Plugin):
         if ofsCommand.startswith('ofs-svnupdate.py'):
             irc.reply('Update successfull, shutting down server...',
                 prefixNick = False)
-            conn.rcon = RconSpecial.UPDATESAVED
+            conn.rconState = RconStatus.UPDATESAVED
             rconcommand = 'save autosave/autosavesoap'
             conn.send_packet(AdminRcon, command = rconcommand)
         elif ofsCommand.startswith('ofs-svntobin.py'):
@@ -262,12 +264,13 @@ class Soap(callbacks.Plugin):
             interval = self.registryValue('passwordInterval', conn.channel)
             if conn.connectionstate != ConnectionState.CONNECTED:
                 break
-            if conn.rcon == RconSpecial.SILENT:
+            if conn.rconState == RconStatus.IDLE:
                 if interval > 0:
                     newPassword = random.choice(list(open(pwFileName)))
                     newPassword = newPassword.strip()
                     newPassword = newPassword.lower()
                     command = 'set server_password %s' % newPassword
+                    conn.rconState = RconStatus.ACTIVE
                     conn.send_packet(AdminRcon, command = command)
                     conn.clientPassword = newPassword
                     time.sleep(interval)
@@ -276,6 +279,8 @@ class Soap(callbacks.Plugin):
                     conn.send_packet(AdminRcon, command = command)
                     conn.clientPassword = None
                     break
+            else:
+                time.sleep(interval)
 
     def _pollThread(self):
         timeout = 1.0
@@ -527,18 +532,23 @@ class Soap(callbacks.Plugin):
 
     def _rcvRcon(self, connChan, result, colour):
         conn = self.connections.get(connChan)
-        if not conn or conn.rcon == RconSpecial.SILENT:
+        if not conn or conn.rconState == RconStatus.IDLE:
             return
         irc = conn.irc
 
-        if conn.rcon == RconSpecial.SHUTDOWNSAVED:
+        if conn.rconNick:
+            resultobj = conn.rconResults.get(conn.rconNick)
+            if not resultobj:
+                return
+            resultobj.results.put(result)
+        elif conn.rconState == RconStatus.SHUTDOWNSAVED:
             if result.startswith('Map successfully saved'):
                 utils.msgChannel(irc, conn.channel, 'Successfully saved game as autosavesoap.sav')
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
                 conn.send_packet(AdminRcon, command = command)
             return
-        elif conn.rcon == RconSpecial.UPDATESAVED:
+        elif conn.rconState == RconStatus.UPDATESAVED:
             if result.startswith('Map successfully saved'):
                 message = 'Shutting down server to finish update. We\'ll be back shortly'
                 utils.msgChannel(irc, conn.channel, message)
@@ -561,7 +571,29 @@ class Soap(callbacks.Plugin):
             return
         if result[3:].startswith('***'):
             result = result[3:]
-        utils.msgChannel(irc, conn.rcon, result)
+            utils.msgChannel(irc, conn.channel, result)
+
+    def _rcvRconEnd(self, connChan, command):
+        conn = self.connections.get(connChan)
+        if not conn:
+            return
+
+        nick = conn.rconNick
+        conn.rconNick = None
+        conn.rconState = RconStatus.IDLE
+        rconresult = conn.rconResults.get(nick)
+        if rconresult:
+            irc = rconresult.irc
+            for i in range(15):
+                if not rconresult.results.empty():
+                    text = rconresult.results.get()
+                    irc.reply(text, prefixNick = False)
+                else:
+                    break
+            if rconresult.results.empty():
+                conn.rconResults
+            else:
+                del conn.rconResults[nick]
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -685,18 +717,28 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        if conn.rcon != RconSpecial.SILENT:
+        if conn.rconState != RconStatus.IDLE:
             message = 'Sorry, still processing previous rcon command'
             irc.reply(message, prefixNick = False)
             return
+
         if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
             message = "RCON Command too long (%d/%d)" % (
                 len(command), NETWORK_RCONCOMMAND_LENGTH)
             irc.reply(message, prefixNick = False)
             return
-        conn.rcon = source
+
         logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
         conn.logger.info(logMessage)
+        
+        conn.rconNick = msg.nick
+        conn.rconState = RconStatus.ACTIVE
+        resultdict = utils.RconResults({
+            'irc':irc,
+            'command':command,
+            'results':Queue.Queue()
+        })
+        conn.rconResults[conn.rconNick] = resultdict
         conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
 
@@ -715,7 +757,7 @@ class Soap(callbacks.Plugin):
             return
 
         irc.reply('Shutting down server...', prefixNick = False)
-        conn.rcon = RconSpecial.SHUTDOWNSAVED
+        conn.rconState = RconStatus.SHUTDOWNSAVED
         command = 'save autosave/autosavesoap'
         conn.send_packet(AdminRcon, command = command)
     shutdown = wrap(shutdown, [optional('text')])
@@ -733,6 +775,7 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
+        conn.rconState = RconStatus.ACTIVE
         command = 'pause'
         conn.send_packet(AdminRcon, command = command)
     pause = wrap(pause, [optional('text')])
@@ -755,8 +798,10 @@ class Soap(callbacks.Plugin):
         if minPlayers > 0:
             command = 'set min_active_clients %s' % self.registryValue(
                 'minPlayers', conn.channel)
+            conn.rconState = RconStatus.ACTIVE
             conn.send_packet(AdminRcon, command = command)
         command = 'unpause'
+        conn.rconState = RconStatus.ACTIVE
         conn.send_packet(AdminRcon, command = command)
     auto = wrap(auto, [optional('text')])
 
@@ -774,8 +819,10 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
         command = 'set min_active_clients 0'
+        conn.rconState = RconStatus.ACTIVE
         conn.send_packet(AdminRcon, command = command)
         command = 'unpause'
+        conn.rconState = RconStatus.ACTIVE
         conn.send_packet(AdminRcon, command = command)
     unpause = wrap(unpause, [optional('text')])
 
