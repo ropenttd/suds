@@ -520,7 +520,7 @@ class Soap(callbacks.Plugin):
                     joining, clientName, company.name, company.id+1)
                 utils.msgChannel(irc, conn.channel, text)
                 conn.logger.info(logMessage)
-            
+
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
             if clientName.startswith('player') and not playAsPlayer:
                 utils.moveToSpectators(irc, conn, client)
@@ -591,9 +591,12 @@ class Soap(callbacks.Plugin):
                 else:
                     break
             if rconresult.results.empty():
-                conn.rconResults
-            else:
                 del conn.rconResults[nick]
+            else:
+                actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
+                text = 'You have %d more messages. Type %sless to view them' % (
+                    rconresult.results.qsize(), actionChar)
+                irc.reply(text)
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -730,7 +733,7 @@ class Soap(callbacks.Plugin):
 
         logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
         conn.logger.info(logMessage)
-        
+
         conn.rconNick = msg.nick
         conn.rconState = RconStatus.ACTIVE
         resultdict = utils.RconResults({
@@ -741,6 +744,40 @@ class Soap(callbacks.Plugin):
         conn.rconResults[conn.rconNick] = resultdict
         conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
+
+    def less(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        outputs remaining rcon output which didn't get shown in the previous rounds
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        rconresult = conn.rconResults.get(msg.nick)
+        if rconresult:
+            for i in range(15):
+                if not rconresult.results.empty():
+                    text = rconresult.results.get()
+                    irc.reply(text, prefixNick = False)
+                else:
+                    break
+            if rconresult.results.empty():
+                del conn.rconResults[nick]
+            else:
+                actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
+                text = 'You have %d more messages. Type %sless to view them' % (
+                    rconresult.results.qsize(), actionChar)
+                irc.reply(text)
+        else:
+            text = 'There are no more messages to display kemosabi'
+            irc.reply(text)
+    less = wrap(less, [optional('text')])
 
     def shutdown(self, irc, msg, args, serverID):
         """ [Server ID or channel]
@@ -992,7 +1029,7 @@ class Soap(callbacks.Plugin):
                 irc.reply('Not connected!!', prefixNick = False)
                 return
             customUrl = self.registryValue('downloadUrl', conn.channel)
-            if customUrl == 'None':
+            if not customUrl:
                 url = utils.generateDownloadUrl(
                     irc, conn.serverinfo.version, osType)
             else:
