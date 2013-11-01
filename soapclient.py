@@ -16,6 +16,7 @@
 ###
 
 import logging
+import Queue
 
 from libottdadmin2.trackingclient import TrackingAdminClient
 from libottdadmin2.event import Event
@@ -70,9 +71,10 @@ class SoapClient(TrackingAdminClient):
         self.logger = logging.getLogger('Soap-%s' % self.channel)
         self.logger.setLevel(logging.INFO)
 
+        self.rconCommands = Queue.Queue()
         self.rconNick = None
-        self.rconState = RconStatus.IDLE
         self.rconResults = {}
+        self.rconState = RconStatus.IDLE
 
         self.connectionstate = ConnectionState.DISCONNECTED
         self.registered = False

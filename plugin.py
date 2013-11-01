@@ -251,7 +251,7 @@ class Soap(callbacks.Plugin):
         pluginDir = os.path.dirname(__file__)
         pwFileName = os.path.join(pluginDir, 'passwords.txt')
 
-        # delay password changing untill connection is fully established,
+        # delay password changing until connection is fully established,
         # abort if it takes longer than 10 seconds
         for second in range(10):
             if conn.connectionstate == ConnectionState.CONNECTED:
@@ -579,12 +579,10 @@ class Soap(callbacks.Plugin):
             return
 
         nick = conn.rconNick
-        conn.rconNick = None
-        conn.rconState = RconStatus.IDLE
         rconresult = conn.rconResults.get(nick)
         if rconresult:
             irc = rconresult.irc
-            for i in range(15):
+            for i in range(5):
                 if not rconresult.results.empty():
                     text = rconresult.results.get()
                     irc.reply(text, prefixNick = False)
@@ -597,6 +595,14 @@ class Soap(callbacks.Plugin):
                 text = 'You have %d more messages. Type %sless to view them' % (
                     rconresult.results.qsize(), actionChar)
                 irc.reply(text)
+
+        if conn.rconCommands.empty():
+            conn.rconNick = None
+            conn.rconState = RconStatus.IDLE
+        else:
+            command = conn.rconCommands.get()
+            conn.send_packet(AdminRcon, command = command)
+
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -761,7 +767,7 @@ class Soap(callbacks.Plugin):
 
         rconresult = conn.rconResults.get(msg.nick)
         if rconresult:
-            for i in range(15):
+            for i in range(5):
                 if not rconresult.results.empty():
                     text = rconresult.results.get()
                     irc.reply(text, prefixNick = False)
@@ -812,9 +818,11 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        conn.rconState = RconStatus.ACTIVE
-        command = 'pause'
-        conn.send_packet(AdminRcon, command = command)
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('pause')
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            conn.send_packet(AdminRcon, command = command)
     pause = wrap(pause, [optional('text')])
 
     def auto(self, irc, msg, args, serverID):
@@ -831,15 +839,15 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        minPlayers = self.registryValue('minPlayers', conn.channel)
-        if minPlayers > 0:
-            command = 'set min_active_clients %s' % self.registryValue(
-                'minPlayers', conn.channel)
+        if conn.rconState == RconStatus.IDLE:
+            minPlayers = self.registryValue('minPlayers', conn.channel)
+            if minPlayers > 0:
+                conn.rconCommands.put('set min_active_clients %s' %
+                    minPlayers)
+            conn.rconCommands.put('unpause')
             conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
-        command = 'unpause'
-        conn.rconState = RconStatus.ACTIVE
-        conn.send_packet(AdminRcon, command = command)
     auto = wrap(auto, [optional('text')])
 
     def unpause(self, irc, msg, args, serverID):
@@ -855,12 +863,13 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        command = 'set min_active_clients 0'
-        conn.rconState = RconStatus.ACTIVE
-        conn.send_packet(AdminRcon, command = command)
-        command = 'unpause'
-        conn.rconState = RconStatus.ACTIVE
-        conn.send_packet(AdminRcon, command = command)
+
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('set min_active_clients 0')
+            conn.rconCommands.put('unpause')
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            conn.send_packet(AdminRcon, command = command)
     unpause = wrap(unpause, [optional('text')])
 
     def ding(self, irc, msg, args, serverID):
