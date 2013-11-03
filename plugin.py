@@ -580,29 +580,27 @@ class Soap(callbacks.Plugin):
 
         nick = conn.rconNick
         rconresult = conn.rconResults.get(nick)
-        if rconresult:
-            irc = rconresult.irc
-            for i in range(5):
-                if not rconresult.results.empty():
-                    text = rconresult.results.get()
-                    irc.reply(text, prefixNick = False)
-                else:
-                    break
-            if rconresult.results.empty():
-                del conn.rconResults[nick]
-            else:
-                actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
-                text = 'You have %d more messages. Type %sless to view them' % (
-                    rconresult.results.qsize(), actionChar)
-                irc.reply(text)
-
         if conn.rconCommands.empty():
             conn.rconNick = None
             conn.rconState = RconStatus.IDLE
+            if rconresult:
+                irc = rconresult.irc
+                for i in range(5):
+                    if not rconresult.results.empty():
+                        text = rconresult.results.get()
+                        irc.reply(text, prefixNick = False)
+                    else:
+                        break
+                if rconresult.results.empty():
+                    del conn.rconResults[nick]
+                else:
+                    actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
+                    text = 'You have %d more messages. Type %sless to view them' % (
+                        rconresult.results.qsize(), actionChar)
+                    irc.reply(text)
         else:
             command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
-
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -774,7 +772,7 @@ class Soap(callbacks.Plugin):
                 else:
                     break
             if rconresult.results.empty():
-                del conn.rconResults[nick]
+                del conn.rconResults[msg.nick]
             else:
                 actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
                 text = 'You have %d more messages. Type %sless to view them' % (
@@ -804,6 +802,65 @@ class Soap(callbacks.Plugin):
         command = 'save autosave/autosavesoap'
         conn.send_packet(AdminRcon, command = command)
     shutdown = wrap(shutdown, [optional('text')])
+
+    def content(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Gets the server to update its downloaded content
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('content update')
+            conn.rconCommands.put('content select all')
+            conn.rconCommands.put('content upgrade')
+            conn.rconCommands.put('content download')
+            conn.rconNick = msg.nick
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            resultdict = utils.RconResults({
+                'irc':irc,
+                'command':command,
+                'results':Queue.Queue()
+            })
+            conn.rconResults[conn.rconNick] = resultdict
+            conn.send_packet(AdminRcon, command = command)
+    content = wrap(content, [optional('text')])
+
+    def rescan(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        rescans the server's downloaded content
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('rescannewgrf')
+            conn.rconCommands.put('rescanai')
+            conn.rconCommands.put('rescangame')
+            conn.rconNick = msg.nick
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            resultdict = utils.RconResults({
+                'irc':irc,
+                'command':command,
+                'results':Queue.Queue()
+            })
+            conn.rconResults[conn.rconNick] = resultdict
+            conn.send_packet(AdminRcon, command = command)
+    rescan = wrap(rescan, [optional('text')])
 
     def pause(self, irc, msg, args, serverID):
         """ [Server ID or channel]
