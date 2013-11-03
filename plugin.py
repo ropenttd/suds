@@ -593,6 +593,13 @@ class Soap(callbacks.Plugin):
                         break
                 if rconresult.results.empty():
                     del conn.rconResults[nick]
+                elif rconresult.results.qsize() <= 2:
+                    for i in range(2):
+                        if not rconresult.results.empty():
+                            text = rconresult.results.get()
+                            irc.reply(text, prefixNick = False)
+                        else:
+                            break
                 else:
                     actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
                     text = 'You have %d more messages. Type %sless to view them' % (
@@ -773,6 +780,13 @@ class Soap(callbacks.Plugin):
                     break
             if rconresult.results.empty():
                 del conn.rconResults[msg.nick]
+            elif rconresult.results.qsize() <= 2:
+                for i in range(2):
+                    if not rconresult.results.empty():
+                        text = rconresult.results.get()
+                        irc.reply(text, prefixNick = False)
+                    else:
+                        break
             else:
                 actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)[:1]
                 text = 'You have %d more messages. Type %sless to view them' % (
