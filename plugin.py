@@ -1095,12 +1095,12 @@ class Soap(callbacks.Plugin):
                 irc.reply('Not connected!!', prefixNick = False)
                 return
             customUrl = self.registryValue('downloadUrl', conn.channel)
-            if not customUrl:
+            if not customUrl or customUrl.startswith('None'):
                 url = utils.generateDownloadUrl(
                     irc, conn.serverinfo.version, osType)
             else:
                 url = customUrl
-        if not url == None:
+        if url:
             irc.reply(url)
         else:
             irc.reply('Couldn\'t decipher download url')
