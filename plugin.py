@@ -1098,11 +1098,11 @@ class Soap(callbacks.Plugin):
             return
 
         url = None
-        if osType == 'autostart':
-            url = 'http://www.openttdcoop.org/wiki/Autostart'
-        elif osType == 'autottd':
-            url = 'http://www.openttdcoop.org/wiki/AutoTTD'
-        elif osType == 'ottdau':
+        if not osType:
+            actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)
+            irc.reply('%sdownload lin|lin64|osx|ottdau|source|win32|win64|win9x'
+                % actionChar)
+        if osType == 'ottdau':
             url = 'http://www.openttdcoop.org/winupdater'
         else:
             if conn.connectionstate != ConnectionState.CONNECTED:
@@ -1119,7 +1119,7 @@ class Soap(callbacks.Plugin):
         else:
             irc.reply('Couldn\'t decipher download url')
     download = wrap(download, [optional(('literal',
-        ['autostart', 'autottd', 'lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
+        ['lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
         optional('text')])
 
 

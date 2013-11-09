@@ -59,10 +59,7 @@ def generateDownloadUrl(irc, version, osType = None):
     testing = '\d\.\d\.\d-rc\d'
     trunk = 'r\d{5}'
 
-    if osType == None:
-        actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)
-        irc.reply('%sdownload autostart|autottd|lin|lin64|osx|ottdau|source|win32|win64|win9x'
-            % actionChar)
+    if not osType:
         url = 'http://www.openttd.org/en/'
         if re.match(stable, version) or re.match(testing, version):
             url += 'download-stable/%s' % version
@@ -78,7 +75,7 @@ def generateDownloadUrl(irc, version, osType = None):
             url += 'nightlies/trunk/%s/openttd-trunk-%s-' % (version, version)
         else:
             url = None
-        if not url == None:
+        if url:
             if osType.startswith('lin'):
                 url += 'linux-generic-'
                 if osType == 'lin':

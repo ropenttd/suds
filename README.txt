@@ -101,8 +101,10 @@ Op/Trusted-only commands:
  auto           - turns on autopause, and re-sets min_active_clients to the
                     configured amount
  rcon           - sends an rcon command to the server
+ content        - updates the downloaded content from bananas
+ rescan         - rescans the content_download directory for new files. (May cause users to get disconnected)
 
-Commands requiring op/trusted and OFS installed 
+Commands requiring op/trusted and OFS installed
  getsave        - download savegame from url
  start          - starts OpenTTD dedicated server
  update         - updates the OpenTTD server and (re)starts it
