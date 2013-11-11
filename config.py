@@ -100,6 +100,10 @@ conf.registerChannelValue(Soap, 'welcomeMessage',
     instance) the client name, put {clientname} in the string, including the {}.
     Valid replacements are: {clientname} {servername} and {serverversion}. Set
     this to 'None' to disable on-join welcome messages """))
+conf.registerChannelValue(Soap, 'defaultSettings',
+    registry.String('', """ This should be an absolute path pointing to a textfile
+    containing one command per line. This file is read by the setdef command, and
+    all commands are executed """))
 conf.registerChannelValue(Soap, 'downloadUrl',
     registry.String('None', """ Custom download url. Use only if using a custom version
     that cannot be obtained from openttd.org. Soap will automatically generate url's

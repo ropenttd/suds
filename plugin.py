@@ -202,10 +202,10 @@ class Soap(callbacks.Plugin):
     def _commandThread(self, conn, irc, ofsCommand, successText = None, delay = 0):
         time.sleep(delay)
         ofs = self.registryValue('ofslocation', conn.channel)
-        command = ofs + '%s' % ofsCommand
+        command = ofs.replace('{OFS}', ofsCommand)
         if ofs.startswith('ssh'):
             useshell = True
-        elif os.path.isdir(ofs):
+        elif os.path.isfile(command.split()[0]):
             useshell = False
         else:
             irc.reply('OFS location invalid. Please review plugins.Soap.ofslocation')
@@ -1085,6 +1085,36 @@ class Soap(callbacks.Plugin):
             (players, spectators, clients))
         irc.reply(text)
     playercount = wrap(playercount, [optional('text')])
+
+    def setdef(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Reads commands from a file specified in plugins.Soap.defaultSettings to
+        set game-settings to default values
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        rconFile = self.registryValue('defaultSettings', conn.channel)
+        if not os.path.isfile(rconFile):
+            irc.reply('Cannot read from %s, please set it to a valid bot-readable file. Absolute path is a must'
+                % rconFile)
+            return
+        if conn.rconState == RconStatus.IDLE:
+            with open(rconFile) as rf:
+                commandlist = rf.readlines()
+            for item in commandlist:
+                conn.rconCommands.put(item.rstrip())
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            conn.send_packet(AdminRcon, command = command)
+            irc.reply('Setting default settings')
+    setdef = wrap(setdef, [optional('text')])
 
     def download(self, irc, msg, args, osType, serverID):
         """ [OS type/program] [Server ID or channel]
