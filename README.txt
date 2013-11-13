@@ -101,8 +101,11 @@ Op/Trusted-only commands:
  auto           - turns on autopause, and re-sets min_active_clients to the
                     configured amount
  rcon           - sends an rcon command to the server
+ players        - lists the clients connected to the server
  content        - updates the downloaded content from bananas
  rescan         - rescans the content_download directory for new files. (May cause users to get disconnected)
+ save           - saves the game to game.sav
+ transfer       - transfers savegame to a web-accessible directory (usage: !transfer number savegame)
 
 Commands requiring op/trusted and OFS installed
  getsave        - download savegame from url
@@ -111,7 +114,6 @@ Commands requiring op/trusted and OFS installed
 
 Publicly available commands
  playercount    - Shows how many people are playing
- players        - lists the clients connected to the server
  companies      - lists companies
  date           - returns the ingame date
  ding           - should be ping, but that command was taken. Dings the server
