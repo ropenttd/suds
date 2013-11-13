@@ -189,7 +189,7 @@ class Soap(callbacks.Plugin):
             host        = self.registryValue('host', conn.channel),
             port        = self.registryValue('port', conn.channel),
             name        = '%s-Soap' % irc.nick)
-        utils.initLogger(conn, self.registryValue('logdir'))
+        utils.initLogger(conn, self.registryValue('logdir'), self.registryValue('logHistory'))
         self._pollObj.register(conn.fileno(),
             POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
@@ -1037,7 +1037,15 @@ class Soap(callbacks.Plugin):
             for company in conn.companies.values():
                 if not company.id == 255:
                     companyColour = utils.getColourNameFromNumber(company.colour)
-                    text = 'Company %d (%s): %s' % (company.id+1, companyColour, company.name)
+                    companyFounded = 'Founded in %d' % company.startyear
+                    companyVehicles = 'Vehicles owned: %d Trains, %s Roadvehicles, %s Ships and %s Aeroplanes' % (
+                        company.vehicles.train,
+                        company.vehicles.lorry + company.vehicles.bus,
+                        company.vehicles.ship,
+                        company.vehicles.plane)
+                    text = 'Company %d (%s): %s, %s, %s' % (
+                        company.id+1, companyColour, company.name,
+                        companyFounded, companyVehicles)
                     if company.ai:
                         text = 'AI ' + text
                     irc.reply(text)

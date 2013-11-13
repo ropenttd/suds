@@ -131,12 +131,12 @@ def getConnection(connections, channels, source, serverID = None):
                     conn = c
     return conn
 
-def initLogger(conn, logdir):
+def initLogger(conn, logdir, history):
     if os.path.isdir(logdir):
         if not len(conn.logger.handlers):
             logfile = os.path.join(logdir, '%s.log' % conn.channel)
             logformat = logging.Formatter('%(asctime)s %(message)s')
-            handler = logging.handlers.RotatingFileHandler(logfile, backupCount = 2)
+            handler = logging.handlers.RotatingFileHandler(logfile, backupCount = history)
             handler.setFormatter(logformat)
             conn.logger.addHandler(handler)
 

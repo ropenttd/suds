@@ -49,6 +49,10 @@ conf.registerGlobalValue(Soap, 'logdir',
     saved to. It will rotate logs when a new game starts, and back up the old
     log. A maximum of 2 logs are backed up. To disable logging, set this to an
     invalid path or 'None' """))
+conf.registerGlobalValue(Soap, 'logHistory',
+    registry.Integer(2, """ Amount of logfiles to keep. This does not include
+    the current logfile. A value of 2 will keep the current logfile, and the 2
+    preceding ones as .log.1 and .log.2."""))
 
 # OpenTTD server configuration
 conf.registerChannelValue(Soap, 'serverID',
