@@ -1232,6 +1232,35 @@ class Soap(callbacks.Plugin):
         cmdThread.start()
     start = wrap(start, [optional('text')])
 
+    def transfer(self, irc, msg, args, gameNo, savegame, serverID):
+        """ <Game Number> <savegame> [Server ID or channel]
+
+        Transfers 'savegame'. Destination directory and name are configured in
+        ofs-transfersave.py. Game number is used to uniquely name the
+        destination file. Warning: this is the only command where the optional
+        Server ID is the last argument
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if savegame.endswith('.sav'):
+            saveUrl = self.registryValue('saveUrl', conn.channel)
+            self.log.info(saveUrl)
+            saveUrl = saveUrl.replace('{ID}', str(gameNo))
+            self.log.info(saveUrl)
+            irc.reply('Attempting to transfer %s' % savegame)
+            ofsCommand = 'ofs-transfersave.py %d %s' % (gameNo, savegame)
+            successText = 'Transfer done. File now at %s' % saveUrl
+            cmdThread = threading.Thread(
+                target = self._commandThread,
+                args = [conn, irc, ofsCommand, successText])
+            cmdThread.daemon = True
+            cmdThread.start()
+
+    transfer = wrap(transfer, ['int', 'something', optional('text')])
+
     def update(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 

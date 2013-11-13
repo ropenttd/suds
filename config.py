@@ -108,5 +108,9 @@ conf.registerChannelValue(Soap, 'downloadUrl',
     registry.String('None', """ Custom download url. Use only if using a custom version
     that cannot be obtained from openttd.org. Soap will automatically generate url's
     for openttd stable and nightly versions."""))
+conf.registerChannelValue(Soap, 'saveUrl',
+    registry.String('None', """ Url where savegames will be available after
+    using the transfer command. enter the full url, including the filename. Use
+    {id}  where the game number goes"""))
 
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
