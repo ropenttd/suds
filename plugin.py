@@ -876,6 +876,33 @@ class Soap(callbacks.Plugin):
             conn.send_packet(AdminRcon, command = command)
     rescan = wrap(rescan, [optional('text')])
 
+    def save(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        saves the game as game.sav in the save directory
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('save game')
+            conn.rconNick = msg.nick
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            resultdict = utils.RconResults({
+                'irc':irc,
+                'command':command,
+                'results':Queue.Queue()
+            })
+            conn.rconResults[conn.rconNick] = resultdict
+            conn.send_packet(AdminRcon, command = command)
+    save = wrap(save, [optional('text')])
+
     def pause(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
@@ -1258,7 +1285,6 @@ class Soap(callbacks.Plugin):
                 args = [conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
-
     transfer = wrap(transfer, ['int', 'something', optional('text')])
 
     def update(self, irc, msg, args, serverID):
