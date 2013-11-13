@@ -1052,7 +1052,7 @@ class Soap(callbacks.Plugin):
         Show a list of players currently playing
         """
 
-        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
         if not conn:
             return
 
