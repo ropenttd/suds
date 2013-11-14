@@ -479,6 +479,9 @@ class Soap(callbacks.Plugin):
             clientName = client.name
 
         if action == Action.CHAT:
+            rulesUrl = self.registryValue('rulesUrl', conn.channel)
+            text = '<%s> %s' % (clientName, message)
+            utils.msgChannel(irc, conn.channel, text)
             if message.startswith('!admin'):
                 text = '*** %s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
                 utils.msgChannel(irc, conn.channel, text)
@@ -491,17 +494,17 @@ class Soap(callbacks.Plugin):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
-                    logMessage = '<NAMECHANGE> Old Name: \'%s\' New Name: \'%s\' (Host: %s)' % (
-                        clientName, newName, client.hostname)
-                    text = '*** %s has changed his/her name to %s' % (
-                        clientName, newName)
-                    conn.logger.info(logMessage)
-                    utils.msgChannel(irc, conn.channel, text)
                     command = 'client_name %s %s' % (clientID, newName)
                     conn.send_packet(AdminRcon, command = command)
-            else:
-                text = '<%s> %s' % (clientName, message)
+            elif message.startswith('!rules') and not rulesUrl.lower() == 'none':
+                self.log.info('should display rules now')
+                text = 'Server rules can be found here: %s' % rulesUrl
                 utils.msgChannel(irc, conn.channel, text)
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT,
+                    destType = DestType.BROADCAST,
+                    clientID = ClientID.SERVER,
+                    message = text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             clientName = clientName.lower()
 
@@ -1018,6 +1021,28 @@ class Soap(callbacks.Plugin):
         else:
             irc.reply(conn.clientPassword)
     password = wrap(password, [optional('text')])
+
+    def rules(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        tells you the current password needed for joining the [specified] game server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        rulesUrl = self.registryValue('rulesUrl', conn.channel)
+        if not rulesUrl.lower() == 'none':
+            text = 'Server rules can be found here: %s' % rulesUrl
+            irc.reply(text, prefixNick = False)
+            if conn.connectionstate == ConnectionState.CONNECTED:
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT,
+                    destType = DestType.BROADCAST,
+                    clientID = ClientID.SERVER,
+                    message = text)
+    rules = wrap(rules, [optional('text')])
 
     def companies(self, irc, msg, args, serverID):
         """ [Server ID or channel]
