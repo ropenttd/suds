@@ -36,10 +36,13 @@ __contributors__ = {}
 __url__ = 'http://dev.openttdcoop.org/projects/soap/'
 
 import config
+import enums
 import soaputils
 import soapclient
 import libottdadmin2
 import plugin
+reload(config)
+reload(enums)
 reload(soaputils)
 reload(soapclient)
 reload(libottdadmin2)

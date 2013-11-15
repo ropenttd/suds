@@ -73,9 +73,10 @@ conf.registerChannelValue(Soap, 'publicAddress',
 # File-related settings
 conf.registerChannelValue(Soap, 'ofslocation',
     registry.String('/home/openttdserver/', """ Location of OpenTTD File Scripts
-    (OFS). This can either be a local directory (/path/to/ofs) or in the form of
-    'ssh -p23 user@host:/path/to/ofs/'. In the latter case, make sure to set up
-    the bot-user to have password-less login to the machine with ofs/openttd """))
+    (OFS). This can either be a local directory (/path/to/ofs/{OFS}) or in the form of
+    'ssh -p23 user@host:/path/to/ofs/{OFS}'. In the latter case, make sure to set up
+    the bot-user to have password-less login to the machine with ofs/openttd. Put
+    {OFS} wher the actual ofs-command should go. """))
 
 # Miscellanious server-specific settings
 conf.registerChannelValue(Soap, 'autoConnect',

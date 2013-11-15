@@ -233,8 +233,6 @@ class Soap(callbacks.Plugin):
             irc.reply(successText, prefixNick = False)
 
         if ofsCommand.startswith('ofs-svnupdate.py'):
-            irc.reply('Update successfull, shutting down server...',
-                prefixNick = False)
             conn.rconState = RconStatus.UPDATESAVED
             rconcommand = 'save autosave/autosavesoap'
             conn.send_packet(AdminRcon, command = rconcommand)
@@ -553,7 +551,7 @@ class Soap(callbacks.Plugin):
             return
         elif conn.rconState == RconStatus.UPDATESAVED:
             if result.startswith('Map successfully saved'):
-                message = 'Shutting down server to finish update. We\'ll be back shortly'
+                message = 'Game saved. Shutting down server to finish update. We\'ll be back shortly'
                 utils.msgChannel(irc, conn.channel, message)
                 conn.send_packet(AdminChat,
                     action = Action.CHAT,
@@ -566,6 +564,27 @@ class Soap(callbacks.Plugin):
 
                 ofsCommand = 'ofs-svntobin.py'
                 successText = None
+                cmdThread = threading.Thread(
+                    target = self._commandThread,
+                    args = [conn, irc, ofsCommand, successText, 15])
+                cmdThread.daemon = True
+                cmdThread.start()
+            return
+        elif conn.rconState == RconStatus.RESTARTSAVED:
+            if result.startswith('Map successfully saved'):
+                message = 'Game saved. Restarting server...'
+                utils.msgChannel(irc, conn.channel, message)
+                conn.send_packet(AdminChat,
+                    action = Action.CHAT,
+                    destType = DestType.BROADCAST,
+                    clientID = ClientID.SERVER,
+                    message = message)
+                conn.connectionstate = ConnectionState.SHUTDOWN
+                command = 'quit'
+                conn.send_packet(AdminRcon, command = command)
+
+                ofsCommand = 'ofs-start.py'
+                successText = 'Server is starting'
                 cmdThread = threading.Thread(
                     target = self._commandThread,
                     args = [conn, irc, ofsCommand, successText, 15])
@@ -814,11 +833,29 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
 
-        irc.reply('Shutting down server...', prefixNick = False)
         conn.rconState = RconStatus.SHUTDOWNSAVED
         command = 'save autosave/autosavesoap'
         conn.send_packet(AdminRcon, command = command)
     shutdown = wrap(shutdown, [optional('text')])
+
+    def restart(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        pauses the [specified] game server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        conn.rconState = RconStatus.RESTARTSAVED
+        command = 'save autosave/autosavesoap'
+        conn.send_packet(AdminRcon, command = command)
+    restart = wrap(restart, [optional('text')])
 
     def content(self, irc, msg, args, serverID):
         """ [Server ID or channel]

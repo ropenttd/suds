@@ -39,3 +39,4 @@ class RconStatus(EnumHelper):
     CHANNEL         = 0x02 # Automatic rcon command has output for the channel
     SHUTDOWNSAVED   = 0x03 # Game has been saved by the shutdown command, no output
     UPDATESAVED     = 0x04 # Game has been saved prior to shutting down for update, no output
+    RESTARTSAVED    = 0x05 # Game has been saved prior to restarting, no output
