@@ -659,7 +659,10 @@ class Soap(callbacks.Plugin):
             name = 'Server'
         else:
             client = conn.clients.get(clientID)
-            name = client.name
+            if client:
+                name = client.name
+            else:
+                name = clientID
         commandName = conn.commands.get(commandID)
         if not commandName:
             commandName = commandID
