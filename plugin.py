@@ -423,8 +423,9 @@ class Soap(callbacks.Plugin):
         logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (
             client.name, client.hostname, client.id)
         conn.logger.info(logMessage)
-        welcome = self.registryValue('welcomeMessage', conn.channel)
+        utils.msgChannel(irc, conn.channel, text)
 
+        welcome = self.registryValue('welcomeMessage', conn.channel)
         if welcome:
             replacements = {
                 '{clientname}':client.name,
