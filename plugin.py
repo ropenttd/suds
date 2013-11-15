@@ -628,6 +628,8 @@ class Soap(callbacks.Plugin):
                     text = 'You have %d more messages. Type %sless to view them' % (
                         rconresult.results.qsize(), actionChar)
                     irc.reply(text)
+                if rconresult.succestext:
+                    irc.reply(rconresult.succestext)
         else:
             command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
@@ -772,6 +774,7 @@ class Soap(callbacks.Plugin):
         conn.rconState = RconStatus.ACTIVE
         resultdict = utils.RconResults({
             'irc':irc,
+            'succestext':None,
             'command':command,
             'results':Queue.Queue()
         })
@@ -834,9 +837,15 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
 
-        conn.rconState = RconStatus.SHUTDOWNSAVED
-        command = 'save autosave/autosavesoap'
-        conn.send_packet(AdminRcon, command = command)
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconCommands.put('save autosave/autosavesoap')
+            conn.rconState = RconStatus.SHUTDOWNSAVED
+            command = conn.rconCommands.get()
+            conn.send_packet(AdminRcon, command = command)
+
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     shutdown = wrap(shutdown, [optional('text')])
 
     def restart(self, irc, msg, args, serverID):
@@ -853,9 +862,13 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
 
-        conn.rconState = RconStatus.RESTARTSAVED
-        command = 'save autosave/autosavesoap'
-        conn.send_packet(AdminRcon, command = command)
+        if conn.rconState == RconStatus.IDLE:
+            conn.rconState = RconStatus.RESTARTSAVED
+            command = 'save autosave/autosavesoap'
+            conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     restart = wrap(restart, [optional('text')])
 
     def content(self, irc, msg, args, serverID):
@@ -881,11 +894,15 @@ class Soap(callbacks.Plugin):
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
                 'irc':irc,
+                'succestext':None,
                 'command':command,
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     content = wrap(content, [optional('text')])
 
     def rescan(self, irc, msg, args, serverID):
@@ -902,6 +919,7 @@ class Soap(callbacks.Plugin):
             irc.reply('Not connected!!', prefixNick = False)
             return
         if conn.rconState == RconStatus.IDLE:
+            irc.reply('Scanning content directories')
             conn.rconCommands.put('rescannewgrf')
             conn.rconCommands.put('rescanai')
             conn.rconCommands.put('rescangame')
@@ -910,11 +928,15 @@ class Soap(callbacks.Plugin):
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
                 'irc':irc,
+                'succestext':'Rescan completed',
                 'command':command,
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     rescan = wrap(rescan, [optional('text')])
 
     def save(self, irc, msg, args, serverID):
@@ -937,6 +959,7 @@ class Soap(callbacks.Plugin):
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
                 'irc':irc,
+                'succestext':None,
                 'command':command,
                 'results':Queue.Queue()
             })
@@ -962,6 +985,9 @@ class Soap(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     pause = wrap(pause, [optional('text')])
 
     def auto(self, irc, msg, args, serverID):
@@ -987,6 +1013,9 @@ class Soap(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     auto = wrap(auto, [optional('text')])
 
     def unpause(self, irc, msg, args, serverID):
@@ -1009,6 +1038,9 @@ class Soap(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.send_packet(AdminRcon, command = command)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     unpause = wrap(unpause, [optional('text')])
 
     def ding(self, irc, msg, args, serverID):
@@ -1106,7 +1138,7 @@ class Soap(callbacks.Plugin):
                         company.vehicles.lorry + company.vehicles.bus,
                         company.vehicles.ship,
                         company.vehicles.plane)
-                    text = 'Company %d (%s): %s, %s, %s' % (
+                    text = 'Company \'%d\' (%s): %s, %s, %s' % (
                         company.id+1, companyColour, company.name,
                         companyFounded, companyVehicles)
                     if company.ai:
@@ -1366,6 +1398,11 @@ class Soap(callbacks.Plugin):
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
         if not conn:
+            return
+
+        if conn.rconState != RconStatus.IDLE:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
             return
 
         irc.reply('Starting update...', prefixNick = False)
