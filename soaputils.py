@@ -34,6 +34,7 @@ class RconResults(MappingObject):
     _mapping = [
         ('irc', 'irc'),
         ('command', 'command'),
+        ('succestext', 'succestext'),
         ('results', 'results'),
     ]
 
