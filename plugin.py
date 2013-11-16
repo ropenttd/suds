@@ -461,7 +461,7 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if not isinstance(client, (long, int)):
-            text = '*** %s had left the game' % client.name
+            text = '*** %s has left the game' % client.name
             utils.msgChannel(irc, conn.channel, text)
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
                 client.name, client.hostname, client.id)
