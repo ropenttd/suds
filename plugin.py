@@ -1076,6 +1076,39 @@ class Soap(callbacks.Plugin):
         irc.reply(text)
     ip = wrap(ip, [optional('text')])
 
+    def info(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Tells you the number of players and spectators on the server at this moment
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        version = conn.serverinfo.version
+        name = conn.serverinfo.name
+        size = '%dx%d' % (conn.mapinfo.x, conn.mapinfo.y)
+        ip = self.registryValue('publicAddress', conn.channel)
+        if ip and not ip == 'None' and not ip == 'Not Available':
+            ip = ', address: %s' % ip
+        else:
+            ip = ''
+        date = conn.date.strftime('%b %d %Y')
+        clients = len(conn.clients)
+        if conn.serverinfo.dedicated:
+            clients -= 1 # deduct server-client for dedicated servers
+        if clients >= 1:
+            clients = ', clients connected: %d' % clients
+        else:
+            clients = ''
+        irc.reply('%s, Version: %s, date: %s%s, map size: %s%s' %
+            (name, version, date, clients, size, ip))
+    info = wrap(info, [optional('text')])
+
     def password(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
