@@ -642,8 +642,7 @@ class Soap(callbacks.Plugin):
 
         if (message.startswith('Game Load Failed') or
                 message.startswith('ERROR: Game Load Failed') or
-                message.startswith('Content server connection') or
-                message.startswith('Completed download')):
+                message.startswith('Content server connection')):
             ircMessage = message.replace("\n", ", ")
             ircMessage = ircMessage.replace("?", ", ")
             utils.msgChannel(irc, conn.channel, ircMessage)
