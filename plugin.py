@@ -1079,7 +1079,7 @@ class Soap(callbacks.Plugin):
     def info(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
-        Tells you the number of players and spectators on the server at this moment
+        Shows some basic information about the server
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, False)
@@ -1108,6 +1108,23 @@ class Soap(callbacks.Plugin):
         irc.reply('%s, Version: %s, date: %s%s, map size: %s%s' %
             (name, version, date, clients, size, ip))
     info = wrap(info, [optional('text')])
+
+    def revision(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Shows the OpenTTD revision that is currently running on the server
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        version = conn.serverinfo.version
+        irc.reply('Game version is %s. Use Download <os-version> to get a direct download link.' % version)
+    revision = wrap(revision, [optional('text')])
 
     def password(self, irc, msg, args, serverID):
         """ [Server ID or channel]
