@@ -149,7 +149,7 @@ def logEvent(logger, message):
 
 def msgChannel(irc, channel, msg):
     if channel in irc.state.channels or irc.isNick(channel):
-        irc.queueMsg(ircmsgs.privmsg(channel, msg))
+        irc.sendMsg(ircmsgs.privmsg(channel, msg))
 
 def moveToSpectators(irc, conn, client):
     text = '%s: Please change your name before joining/starting a company' % client.name
