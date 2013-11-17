@@ -20,7 +20,10 @@ Prerequisites:
  can be found here: http://sourceforge.net/projects/supybot/
 
  OFS simply needs to be copied to a directory on the same user@host as that
- OpenTTD server, and configured. See the included readme.txt for details.
+ OpenTTD server, and configured. See the included readme.txt for details. If the
+ server is located on a different user@host from the bot, you will need to give
+ the user running the bot password-less ssh access to the user@host. This allows
+ the bot to eg download a savegame to the server.
 
 
 
@@ -103,6 +106,7 @@ Op/Trusted-only commands:
  rcon           - sends an rcon command to the server
  players        - lists the clients connected to the server
  content        - updates the downloaded content from bananas
+ contentupdate  - performs 'content update'. use this before using the 'content' command
  rescan         - rescans the content_download directory for new files. (May cause users to get disconnected)
  save           - saves the game to game.sav
  transfer       - transfers savegame to a web-accessible directory (usage: !transfer number savegame)
@@ -117,8 +121,10 @@ Publicly available commands
  companies      - lists companies
  date           - returns the ingame date
  ding           - should be ping, but that command was taken. Dings the server
+ info           - Shows some basic info about the server
  ip             - Replies with the address needed to join the server as a player
  password       - shows the current password needed to join the server
+ revision       - Shows current revision of the OpenTTD server
 
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
@@ -127,6 +133,7 @@ Publicly available commands
  There are also 2 ingame commands:
  !admin             - sends a message to irc requesting admins look at the server
  !nick <newnick>    - will change the ingame nick of the caller
+ !rules             - replies with an url pointing to the rules for playing
 
 
 
