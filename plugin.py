@@ -592,9 +592,6 @@ class Soap(callbacks.Plugin):
                 cmdThread.daemon = True
                 cmdThread.start()
             return
-        if result[3:].startswith('***'):
-            result = result[3:]
-            utils.msgChannel(irc, conn.channel, result)
 
     def _rcvRconEnd(self, connChan, command):
         conn = self.connections.get(connChan)
@@ -611,7 +608,10 @@ class Soap(callbacks.Plugin):
                 for i in range(5):
                     if not rconresult.results.empty():
                         text = rconresult.results.get()
-                        irc.reply(text, prefixNick = False)
+                        if command.startswith('move') and text[3:].startswith('***'):
+                            pass
+                        else:
+                            irc.reply(text, prefixNick = False)
                     else:
                         break
                 if rconresult.results.empty():
