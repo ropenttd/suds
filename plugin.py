@@ -1289,14 +1289,23 @@ class Soap(callbacks.Plugin):
                 % rconFile)
             return
         if conn.rconState == RconStatus.IDLE:
+            commandlist = []
             with open(rconFile) as rf:
-                commandlist = rf.readlines()
-            for item in commandlist:
-                conn.rconCommands.put(item.rstrip())
-            conn.rconState = RconStatus.ACTIVE
-            command = conn.rconCommands.get()
-            conn.send_packet(AdminRcon, command = command)
-            irc.reply('Setting default settings')
+                for line in rf.readlines():
+                    commandlist.append(line.rstrip())
+            if len(commandlist):
+                commandlist.sort()
+                for item in commandlist:
+                    conn.rconCommands.put(item)
+                conn.rconState = RconStatus.ACTIVE
+                command = conn.rconCommands.get()
+                conn.send_packet(AdminRcon, command = command)
+                irc.reply('Setting default settings: %s' % format('%L', commandlist))
+            else:
+                irc.reply('No commands found in %s.' % rconFile)
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
     setdef = wrap(setdef, [optional('text')])
 
     def download(self, irc, msg, args, osType, serverID):
