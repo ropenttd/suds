@@ -641,7 +641,9 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if (message.startswith('Game Load Failed') or
-                message.startswith('ERROR: Game Load Failed')):
+                message.startswith('ERROR: Game Load Failed') or
+                message.startswith('Content server connection') or
+                message.startswith('Completed download')):
             ircMessage = message.replace("\n", ", ")
             ircMessage = ircMessage.replace("?", ", ")
             utils.msgChannel(irc, conn.channel, ircMessage)
@@ -874,10 +876,10 @@ class Soap(callbacks.Plugin):
             irc.reply(message, prefixNick = False)
     restart = wrap(restart, [optional('text')])
 
-    def content(self, irc, msg, args, serverID):
+    def contentupdate(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
-        Gets the server to update its downloaded content
+        Gets the server to update its list of online contents
         """
 
         source, conn = self._ircCommandInit(irc, msg, serverID, True)
@@ -889,6 +891,37 @@ class Soap(callbacks.Plugin):
             return
         if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('content update')
+            conn.rconNick = msg.nick
+            conn.rconState = RconStatus.ACTIVE
+            command = conn.rconCommands.get()
+            resultdict = utils.RconResults({
+                'irc':irc,
+                'succestext':None,
+                'command':command,
+                'results':Queue.Queue()
+            })
+            conn.rconResults[conn.rconNick] = resultdict
+            conn.send_packet(AdminRcon, command = command)
+            irc.reply('Performing content update')
+        else:
+            message = 'Sorry, still processing previous rcon command'
+            irc.reply(message, prefixNick = False)
+    contentupdate = wrap(contentupdate, [optional('text')])
+
+    def content(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Gets the server to update the downloaded content to the latest versions
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, True)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+        if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('content select all')
             conn.rconCommands.put('content upgrade')
             conn.rconCommands.put('content download')
