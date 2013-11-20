@@ -97,7 +97,7 @@ Configuration
 
 
 Op/Trusted-only commands:
- apconnect      - connects to the preconfigured openttd server(*)
+ apconnect      - connects to the openttd server
  apdisconnect   - disconnects from same
  pause          - manually pauses the game
  unpause        - manually unpauses the game (sets min_active_clients to 0)
@@ -130,7 +130,7 @@ Publicly available commands
  be handy when you want to command a server from a different channel or from
  private message.
 
- There are also 2 ingame commands:
+ There are also 3 ingame commands:
  !admin             - sends a message to irc requesting admins look at the server
  !nick <newnick>    - will change the ingame nick of the caller
  !rules             - replies with an url pointing to the rules for playing
