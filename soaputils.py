@@ -117,6 +117,32 @@ def getColourNameFromNumber(number):
     colourName = colours.get(number, number)
     return colourName
 
+def getQuitReasonFromNumber(number):
+    reasons = {
+        0x00 :'general error',
+        0x01 :'desync error',
+        0x02 :'could not load map',
+        0x03 :'connection lost',
+        0x04 :'protocol error',
+        0x05 :'NewGRF mismatch',
+        0x06 :'not authorized',
+        0x07 :'received invalid or unexpected packet',
+        0x08 :'wrong revision',
+        0x09 :'name already in use',
+        0x0A :'wrong password',
+        0x0B :'wrong company in DoCommand',
+        0x0C :'kicked by server',
+        0x0D :'was trying to use a cheat',
+        0x0E :'server full',
+        0x0F :'was sending too many commands',
+        0x10 :'received no password in time',
+        0x11 :'general timeout',
+        0x12 :'downloading map took too long',
+        0x13 :'processing map took too long',
+    }
+    reasonText = reasons.get(number, number)
+    return reasonText
+
 def getConnection(connections, channels, source, serverID = None):
     conn = None
 

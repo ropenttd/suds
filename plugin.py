@@ -461,7 +461,11 @@ class Soap(callbacks.Plugin):
         irc = conn.irc
 
         if not isinstance(client, (long, int)):
-            text = '*** %s has left the game' % client.name
+            if errorcode:
+                reason = '%s' % utils.getQuitReasonFromNumber(errorcode)
+            else:
+                reason = 'Leaving'
+            text = '*** %s has left the game (%s)' % (client.name, reason)
             utils.msgChannel(irc, conn.channel, text)
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
                 client.name, client.hostname, client.id)
@@ -608,7 +612,9 @@ class Soap(callbacks.Plugin):
                 for i in range(5):
                     if not rconresult.results.empty():
                         text = rconresult.results.get()
-                        if command.startswith('move') and text[3:].startswith('***'):
+                        if text[3:].startswith('***') and (
+                            command.startswith('move') or
+                            command.startswith('kick')):
                             pass
                         else:
                             irc.reply(text, prefixNick = False)
