@@ -226,8 +226,22 @@ class Soap(callbacks.Plugin):
         for line in output.splitlines():
             self.log.info('%s output: %s' % (ofsCommand.split()[0], line))
         if commandObject.returncode:
-            irc.reply('%s reported an error, exitcode: %s. See bot-log for more information.'
-                % (ofsCommand.split()[0], commandObject.returncode))
+            ofsFile = ofsCommand.split()[0]
+            code = commandObject.returncode
+            if ofsFile == 'ofs-getsave.py':
+                irc.reply(utils.ofsGetsaveExitcodeToText(code))
+            elif ofsFile == 'ofs-start.py':
+                irc.reply(utils.ofsStartExitcodeToText(code))
+            elif ofsFile == 'ofs-svntobin.py':
+                irc.reply(utils.ofsSvnToBinExitcodeToText(code))
+            elif ofsFile == 'ofs-svnupdate.py':
+                irc.reply(utils.ofsSvnUpdateExitcodeToText(code))
+            elif ofsFile == 'ofs-transfersave.py':
+                irc.reply(utils.ofsTransferSaveExitcodeToText(code))
+            else:
+                irc.reply('%s reported an error, exitcode: %s. See bot-log for more information.'
+                    % (ofsFile, code))
+                irc.reply('PS this message should not be seen, please thwack Taede to get a proper error message')
             return
         if successText:
             irc.reply(successText, prefixNick = False)

@@ -190,6 +190,57 @@ def moveToSpectators(irc, conn, client):
         message = text)
     msgChannel(irc, conn.channel, text)
 
+def ofsGetsaveExitcodeToText(number):
+    texts = {
+        0x00 :'',
+        0x01 :'Invalid directory in ofs-getsave.py. Please configure it accordingly',
+        0x02 :'Couldn\'t save game to disk',
+        0x03 :'URL did not lead to a valid savegame. Please check the url in your browser',
+    }
+    text = texts.get(number, number)
+    return text
+
+def ofsStartExitcodeToText(number):
+    texts = {
+        0x00 :'',
+        0x01 :'OpenTTD appears to be running already. Try !apconnect instead',
+        0x02 :'OpenTTD was started succesfully, but openttd.pid could not be updated',
+        0x03 :'Could not start OpenTTD. Check the configuration of ofs-start.py',
+        0x04 :'Started OpenTTD, but couldn\'t read a valid pid from the output. Likely something went wrong',
+    }
+    text = texts.get(number, number)
+    return text
+
+def ofsSvnToBinExitcodeToText(number):
+    texts = {
+        0x00 :'',
+        0x01 :'Copying the new executable to the server directory did not succeed',
+    }
+    text = texts.get(number, number)
+    return text
+
+def ofsSvnUpdateExitcodeToText(number):
+    texts = {
+        0x00 :'',
+        0x01 :'Source directory does not seem to exist. Please check ofs-svnupdate.py configuration',
+        0x02 :'Invalid branch selected in ofs-svnupdate.py\'s configuration. Please use nightlies/trunk, stable or testing',
+        0x03 :'Something went wrong executing make or svn. Please run ofs-svnupdate.py manually and see what goes wrong',
+    }
+    text = texts.get(number, number)
+    return text
+
+def ofsTransferSaveExitcodeToText(number):
+    texts = {
+        0x00 :'',
+        0x01 :'File already exists, not transferring savegame',
+        0x02 :'Missing either game ID or savegame, or possibly both',
+        0x03 :'SSH configuration invalid. Please review ofs-transfersave.py\'s configuration',
+        0x04 :'Couldn\'t find file, please specify a valid savegame',
+        0x05 :'Failed to trasfer the savegame. Please run ofs-transfersave manually to see what causes this',
+    }
+    text = texts.get(number, number)
+    return text
+
 def refreshConnection(connections, registeredConnections, conn):
     try:
         del registeredConnections[conn.filenumber]
