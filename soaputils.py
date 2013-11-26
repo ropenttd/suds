@@ -158,6 +158,12 @@ def getConnection(connections, channels, source, serverID = None):
                     conn = c
     return conn
 
+def getConnectionID(conn):
+    if conn.ID == 'default':
+        return conn.channel
+    else:
+        return conn.ID
+
 def initLogger(conn, logdir, history):
     if os.path.isdir(logdir):
         if not len(conn.logger.handlers):

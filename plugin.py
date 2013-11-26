@@ -135,8 +135,10 @@ class Soap(callbacks.Plugin):
         conn.connectionstate = ConnectionState.AUTHENTICATING
         pwInterval = self.registryValue('passwordInterval', conn.channel)
         if pwInterval != 0:
+            connectionid = utils.getConnectionID(conn)
             pwThread = threading.Thread(
                 target = self._passwordThread,
+                name = 'PasswordRotation.%s' % connectionid,
                 args = [conn])
             pwThread.daemon = True
             pwThread.start()
@@ -256,8 +258,10 @@ class Soap(callbacks.Plugin):
         elif ofsCommand.startswith('ofs-svntobin.py'):
             ofsCommand = 'ofs-start.py'
             successText = 'Server is starting'
+            connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
                 target = self._commandThread,
+                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
                 args = [conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
@@ -586,8 +590,10 @@ class Soap(callbacks.Plugin):
 
                 ofsCommand = 'ofs-svntobin.py'
                 successText = None
+                connectionid = utils.getConnectionID(conn)
                 cmdThread = threading.Thread(
                     target = self._commandThread,
+                    name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
                     args = [conn, irc, ofsCommand, successText, 15])
                 cmdThread.daemon = True
                 cmdThread.start()
@@ -607,8 +613,10 @@ class Soap(callbacks.Plugin):
 
                 ofsCommand = 'ofs-start.py'
                 successText = 'Server is starting'
+                connectionid = utils.getConnectionID(conn)
                 cmdThread = threading.Thread(
                     target = self._commandThread,
+                    name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
                     args = [conn, irc, ofsCommand, successText, 15])
                 cmdThread.daemon = True
                 cmdThread.start()
@@ -1450,8 +1458,10 @@ class Soap(callbacks.Plugin):
             irc.reply('Starting download...', prefixNick = False)
             ofsCommand = 'ofs-getsave.py %s' % saveUrl
             successText = 'Savegame successfully downloaded'
+            connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
                 target = self._commandThread,
+                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
                 args = [conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
@@ -1474,8 +1484,10 @@ class Soap(callbacks.Plugin):
 
         ofsCommand = 'ofs-start.py'
         successText = 'Server is starting...'
+        connectionid = utils.getConnectionID(conn)
         cmdThread = threading.Thread(
             target = self._commandThread,
+            name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
             args = [conn, irc, ofsCommand, successText])
         cmdThread.daemon = True
         cmdThread.start()
@@ -1502,8 +1514,10 @@ class Soap(callbacks.Plugin):
             irc.reply('Attempting to transfer %s' % savegame)
             ofsCommand = 'ofs-transfersave.py %d %s' % (gameNo, savegame)
             successText = 'Transfer done. File now at %s' % saveUrl
+            connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
                 target = self._commandThread,
+                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
                 args = [conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
@@ -1534,8 +1548,10 @@ class Soap(callbacks.Plugin):
                 message = message)
         ofsCommand = 'ofs-svnupdate.py'
         successText = 'Game successfully updated'
+        connectionid = utils.getConnectionID(conn)
         cmdThread = threading.Thread(
             target = self._commandThread,
+            name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
             args = [conn, irc, ofsCommand, successText])
         cmdThread.daemon = True
         cmdThread.start()
