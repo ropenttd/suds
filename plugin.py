@@ -231,7 +231,7 @@ class Soap(callbacks.Plugin):
             if ofsFile == 'ofs-getsave.py':
                 irc.reply(utils.ofsGetsaveExitcodeToText(code))
             elif ofsFile == 'ofs-start.py':
-                irc.reply(utils.ofsStartExitcodeToText(code))
+                utils.msgChannel(irc, conn.channel, utils.ofsStartExitcodeToText(code))
             elif ofsFile == 'ofs-svntobin.py':
                 irc.reply(utils.ofsSvnToBinExitcodeToText(code))
             elif ofsFile == 'ofs-svnupdate.py':
@@ -244,7 +244,10 @@ class Soap(callbacks.Plugin):
                 irc.reply('PS this message should not be seen, please thwack Taede to get a proper error message')
             return
         if successText:
-            irc.reply(successText, prefixNick = False)
+            if not ofsCommand.startswith('ofs-start.py'):
+                irc.reply(successText, prefixNick = False)
+            else:
+                utils.msgChannel(irc, conn.channel, successText)
 
         if ofsCommand.startswith('ofs-svnupdate.py'):
             conn.rconState = RconStatus.UPDATESAVED
