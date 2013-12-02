@@ -436,7 +436,6 @@ class Soap(callbacks.Plugin):
     def _rcvClientJoin(self, connChan, client):
         conn = self.connections.get(connChan)
         if not conn or isinstance(client, (long, int)):
-            self.log.info('received event, not conn or client is a number')
             return
         irc = conn.irc
 
@@ -460,6 +459,11 @@ class Soap(callbacks.Plugin):
                     destType = DestType.CLIENT,
                     clientID = client.id,
                     message = line)
+
+        if not client.play_as == 255 and client.name.lower().startswith('player'):
+            playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
+            if not playAsPlayer:
+                utils.moveToSpectators(irc, conn, client)
 
     def _rcvClientUpdate(self, connChan, old, client, changed):
         conn = self.connections.get(connChan)
