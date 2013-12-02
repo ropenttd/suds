@@ -530,8 +530,6 @@ class Soap(callbacks.Plugin):
                     clientID = ClientID.SERVER,
                     message = text)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
-            clientName = clientName.lower()
-
             if not isinstance(client, (long, int)):
                 company = conn.companies.get(client.play_as)
                 if action == Action.COMPANY_JOIN:
@@ -549,7 +547,7 @@ class Soap(callbacks.Plugin):
                 conn.logger.info(logMessage)
 
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
-            if clientName.startswith('player') and not playAsPlayer:
+            if clientName.lower().startswith('player') and not playAsPlayer:
                 utils.moveToSpectators(irc, conn, client)
         elif action == Action.COMPANY_SPECTATOR:
             text = '*** %s has joined spectators' % clientName
