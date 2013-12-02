@@ -184,7 +184,7 @@ def msgChannel(irc, channel, msg):
         irc.sendMsg(ircmsgs.privmsg(channel, msg))
 
 def moveToSpectators(irc, conn, client):
-    text = '%s: Please change your name before joining/starting a company' % client.name
+    text = '%s: Please change your name before joining/starting a company. Use \'!name <new name>\' to do so.' % client.name
     command = 'move %s 255' % client.id
     conn.rcon = conn.channel
 
