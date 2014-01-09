@@ -19,7 +19,8 @@ Prerequisites:
  Supybot comes with its own installation instructions. Those and its user manual
  can be found here: http://sourceforge.net/projects/supybot/
 
- OFS simply needs to be copied to a directory on the same user@host as that
+ OFS (Openttd File Scripts) can be obtained here: http://dev.openttdcoop.org/projects/ofs
+ It simply needs to be copied to a directory on the same user@host as that
  OpenTTD server, and configured. See the included readme.txt for details. If the
  server is located on a different user@host from the bot, you will need to give
  the user running the bot password-less ssh access to the user@host. This allows
