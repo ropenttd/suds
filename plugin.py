@@ -53,7 +53,8 @@ class Soap(callbacks.Plugin):
         self.registeredConnections = {}
         self.connectionIds = []
         for channel in self.channels:
-            conn = SoapClient(channel)
+            serverID = self.registryValue('serverID', channel)
+            conn = SoapClient(channel, serverID)
             self._attachEvents(conn)
             self._initSoapClient(conn, irc)
             self.connections[channel.lower()] = conn

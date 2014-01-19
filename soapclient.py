@@ -63,12 +63,13 @@ class SoapClient(TrackingAdminClient):
 
     # Initialization & miscellanious functions
 
-    def __init__(self, channel, events = None):
+    def __init__(self, channel, serverid, events = None):
         super(SoapClient, self).__init__(events)
         self.channel = channel
+        self.ID = serverid
         self.soapEvents = SoapEvents()
         self._attachEvents()
-        self.logger = logging.getLogger('Soap-%s' % self.channel)
+        self.logger = logging.getLogger('Soap-%s' % self.ID)
         self.logger.setLevel(logging.INFO)
 
         self.rconCommands = Queue.Queue()
@@ -104,7 +105,7 @@ class SoapClient(TrackingAdminClient):
         self.events.pong            += self._rcvPong
 
     def copy(self):
-        obj = SoapClient(self._channel, self.events)
+        obj = SoapClient(self._channel, self._ID, self.events)
         for prop in self._settable_args:
             setattr(obj, prop, getattr(self, prop, None))
         return obj
