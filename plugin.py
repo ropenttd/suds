@@ -493,8 +493,8 @@ class Soap(callbacks.Plugin):
                 reason = 'Leaving'
             text = '*** %s has left the game (%s)' % (client.name, reason)
             utils.msgChannel(irc, conn.channel, text)
-            logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s)' % (
-                client.name, client.hostname, client.id)
+            logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s, Reason: \'%s\')' % (
+                client.name, client.hostname, client.id, leaving)
             conn.logger.info(logMessage)
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
