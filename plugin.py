@@ -411,7 +411,10 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
         if not conn.logger == None and len(conn.logger.handlers):
             for handler in conn.logger.handlers:
-                handler.doRollover()
+                try:
+                    handler.doRollover()
+                except OSError as e:
+                    pass
         logMessage = '<NEW> New log file started'
         conn.logger.info(logMessage)
 
