@@ -196,6 +196,24 @@ def moveToSpectators(irc, conn, client):
         message = text)
     msgChannel(irc, conn.channel, text)
 
+def playercount(conn):
+    clients = len(conn.clients)
+    if conn.serverinfo.dedicated:
+        clients -= 1 # deduct server-client for dedicated servers
+    players = 0
+    for client in conn.clients.values():
+        if not client.play_as == 255:
+            players += 1
+    spectators = clients - players
+    if clients:
+        text = 'There are currently %d players and %d spectators, '\
+            'making a total of %d clients connected' % (
+            (players, spectators, clients))
+    else:
+        text = 'The server is empty, noone is connected. '\
+                    'Feel free to remedy this situation'
+    return text
+
 def ofsGetsaveExitcodeToText(number):
     texts = {
         0x00 :'',
