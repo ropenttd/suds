@@ -1180,6 +1180,29 @@ class Soap(callbacks.Plugin):
             (name, version, date, clients, size, ip))
     info = wrap(info, [optional('text')])
 
+    def vehicles(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Gives a count of all vehicles in the game, sorted by type
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        if conn.companies.values():
+            text = 'Total vehicles per type: Rail: %d, Road: %d, Water: %d, Air: %d' %\
+                utils.vehicleCount(conn.companies)
+            irc.reply(text)
+        else:
+            irc.reply('There are currently no companies in existence. '\
+                'Without companies, there cannot be vehicles')
+    vehicles = wrap(vehicles, [optional('text')])
+
     def revision(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
@@ -1333,7 +1356,7 @@ class Soap(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        
+
         irc.reply(utils.playercount(conn))
     playercount = wrap(playercount, [optional('text')])
 

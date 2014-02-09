@@ -273,3 +273,13 @@ def refreshConnection(connections, registeredConnections, conn):
     newconn = conn.copy()
     connections[conn.channel] = newconn
     return newconn
+
+def vehicleCount(companies):
+    rail = road = water = air = 0
+    for company in companies.values():
+        if not company.id == 255:
+                rail += company.vehicles.train
+                road += (company.vehicles.lorry + company.vehicles.bus)
+                water += company.vehicles.ship
+                air += company.vehicles.plane
+    return (rail, road, water, air)
