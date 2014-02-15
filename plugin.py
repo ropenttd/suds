@@ -308,21 +308,20 @@ class Soap(callbacks.Plugin):
         while True:
             if len(self.registeredConnections) >= 1:
                 events = self._pollObj.poll(timeout * POLL_MOD)
-                if events:
-                    for fileno, event in events:
-                        conn = self.registeredConnections.get(fileno)
-                        if not conn:
-                            continue
-                        if (event & POLLIN) or (event & POLLPRI):
-                            packet = conn.recv_packet()
-                            if packet == None:
-                                utils.disconnect(conn, True)
-                            # else:
-                            #     self.log.info('%s - %s' % (conn.ID, packet))
-                        elif (event & POLLERR) or (event & POLLHUP):
+                for fileno, event in events:
+                    conn = self.registeredConnections.get(fileno)
+                    if not conn:
+                        continue
+                    if (event & POLLIN) or (event & POLLPRI):
+                        packet = conn.recv_packet()
+                        if packet == None:
                             utils.disconnect(conn, True)
+                        # else:
+                        #     self.log.info('%s - %s' % (conn.ID, packet))
+                    elif (event & POLLERR) or (event & POLLHUP):
+                        utils.disconnect(conn, True)
                 else:
-                    time.sleep(0.1)
+                    time.sleep(0.01)
             # lets not use up 100% cpu if there are no active connections
             else:
                 time.sleep(1)
