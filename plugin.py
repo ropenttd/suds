@@ -1435,6 +1435,15 @@ class Soap(callbacks.Plugin):
         ['lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
         optional('text')])
 
+    def help(self, irc, msg, args):
+        """  Takes no arguments
+
+        Returns the url with a list of commands
+        """
+
+        irc.reply('http://wiki.openttdcoop.org/Soap')
+    help = wrap(help)
+
 
 
     # Relay IRC back ingame
