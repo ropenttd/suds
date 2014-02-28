@@ -118,14 +118,16 @@ Commands requiring op/trusted and OFS installed
  update         - updates the OpenTTD server and (re)starts it
 
 Publicly available commands
- playercount    - Shows how many people are playing
+ playercount    - shows how many people are playing
  companies      - lists companies
  date           - returns the ingame date
  ding           - should be ping, but that command was taken. Dings the server
- info           - Shows some basic info about the server
- ip             - Replies with the address needed to join the server as a player
+ help           - links to http://wiki.openttdcoop.org/Soap
+ info           - shows some basic info about the server
+ ip             - replies with the address needed to join the server as a player
  password       - shows the current password needed to join the server
- revision       - Shows current revision of the OpenTTD server
+ revision       - shows current revision of the OpenTTD server
+ vehicles       - totals each vehicle type in the game
 
  These commands can also be called with channel or serverID as parameter. This can
  be handy when you want to command a server from a different channel or from
