@@ -321,7 +321,7 @@ class Soap(callbacks.Plugin):
                     elif (event & POLLERR) or (event & POLLHUP):
                         utils.disconnect(conn, True)
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.0001)
             # lets not use up 100% cpu if there are no active connections
             else:
                 time.sleep(1)
