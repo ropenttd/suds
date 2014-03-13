@@ -166,10 +166,11 @@ class SoapClient(TrackingAdminClient):
 
     # Store some extra info
 
-    _settable_args = TrackingAdminClient._settable_args + ['irc', 'ID', 'channel']
+    _settable_args = TrackingAdminClient._settable_args + ['irc', 'ID', 'channel', 'debugLog']
     _irc = None
     _ID = 'Default'
     _channel = None
+    _debugLog = False
 
     @property
     def channel(self):
@@ -194,6 +195,18 @@ class SoapClient(TrackingAdminClient):
     @ID.setter
     def ID(self, value):
         self._ID = value.lower()
+
+    @property
+    def debugLog(self):
+        return self._debugLog
+
+    @debugLog.setter
+    def debugLog(self, value):
+        self._debugLog = value
+        if self._debugLog:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO)
 
     update_types = [
         (UpdateType.CLIENT_INFO,        UpdateFrequency.AUTOMATIC),

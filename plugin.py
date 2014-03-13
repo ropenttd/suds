@@ -146,6 +146,7 @@ class Soap(callbacks.Plugin):
         else:
             command = 'set server_password *'
             conn.rconState = RconStatus.ACTIVE
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
             conn.clientPassword = None
 
@@ -169,6 +170,7 @@ class Soap(callbacks.Plugin):
         except IOError:
             pass
 
+        conn.logger.debug('>>--DEBUG--<< Disconnected')
         if conn.serverinfo.name:
             text = 'Disconnected from %s' % (conn.serverinfo.name)
             utils.msgChannel(conn.irc, conn.channel, text)
@@ -255,6 +257,7 @@ class Soap(callbacks.Plugin):
         if ofsCommand.startswith('ofs-svnupdate.py'):
             conn.rconState = RconStatus.UPDATESAVED
             rconcommand = 'save autosave/autosavesoap'
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = rconcommand)
         elif ofsCommand.startswith('ofs-svntobin.py'):
             ofsCommand = 'ofs-start.py'
@@ -291,12 +294,15 @@ class Soap(callbacks.Plugin):
                     newPassword = newPassword.lower()
                     command = 'set server_password %s' % newPassword
                     conn.rconState = RconStatus.ACTIVE
+                    conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                     conn.send_packet(AdminRcon, command = command)
                     conn.clientPassword = newPassword
                     time.sleep(interval)
                 else:
                     command = 'set server_password *'
+                    conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                     conn.send_packet(AdminRcon, command = command)
+
                     conn.clientPassword = None
                     break
             else:
@@ -315,13 +321,18 @@ class Soap(callbacks.Plugin):
                     if (event & POLLIN) or (event & POLLPRI):
                         packet = conn.recv_packet()
                         if packet == None:
+                            logMessage = '>>--DEBUG--<< Received empty packet, forcing disconnect'
+                            conn.logger.debug(logMessage)
                             utils.disconnect(conn, True)
-                        # else:
-                        #     self.log.info('%s - %s' % (conn.ID, packet))
+                        else:
+                            logMessage = '>>--DEBUG--<< Received packet: %s' % str(packet)
+                            conn.logger.debug(logMessage)
                     elif (event & POLLERR) or (event & POLLHUP):
+                        logMessage = '>>--DEBUG--<< Received POLLERR or POLLHUP, forcing disconnect'
+                        conn.logger.debug(logMessage)
                         utils.disconnect(conn, True)
                 else:
-                    time.sleep(0.0001)
+                    time.sleep(0.01)
             # lets not use up 100% cpu if there are no active connections
             else:
                 time.sleep(1)
@@ -430,6 +441,7 @@ class Soap(callbacks.Plugin):
         utils.msgChannel(irc, conn.channel, text)
         command = 'set min_active_clients %s' % self.registryValue(
             'minPlayers', conn.channel)
+        conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
         conn.send_packet(AdminRcon, command = command)
         logMessage = '-' * 80
         conn.logger.info(logMessage)
@@ -527,6 +539,7 @@ class Soap(callbacks.Plugin):
                 newName = newName.strip()
                 if len(newName) > 0:
                     command = 'client_name %s %s' % (clientID, newName)
+                    conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                     conn.send_packet(AdminRcon, command = command)
             elif message.startswith('!rules') and not rulesUrl.lower() == 'none':
                 self.log.info('should display rules now')
@@ -579,6 +592,7 @@ class Soap(callbacks.Plugin):
                 utils.msgChannel(irc, conn.channel, 'Successfully saved game as autosavesoap.sav')
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
+                conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                 conn.send_packet(AdminRcon, command = command)
             return
         elif conn.rconState == RconStatus.UPDATESAVED:
@@ -592,6 +606,7 @@ class Soap(callbacks.Plugin):
                     message = message)
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
+                conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                 conn.send_packet(AdminRcon, command = command)
 
                 ofsCommand = 'ofs-svntobin.py'
@@ -615,6 +630,7 @@ class Soap(callbacks.Plugin):
                     message = message)
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
+                conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                 conn.send_packet(AdminRcon, command = command)
 
                 ofsCommand = 'ofs-start.py'
@@ -669,6 +685,7 @@ class Soap(callbacks.Plugin):
                     irc.reply(rconresult.succestext)
         else:
             command = conn.rconCommands.get()
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
 
     def _rcvConsole(self, connChan, origin, message):
@@ -822,6 +839,7 @@ class Soap(callbacks.Plugin):
             'results':Queue.Queue()
         })
         conn.rconResults[conn.rconNick] = resultdict
+        conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
         conn.send_packet(AdminRcon, command = command)
     rcon = wrap(rcon, ['text'])
 
@@ -884,6 +902,7 @@ class Soap(callbacks.Plugin):
             conn.rconCommands.put('save autosave/autosavesoap')
             conn.rconState = RconStatus.SHUTDOWNSAVED
             command = conn.rconCommands.get()
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
 
         else:
@@ -908,6 +927,7 @@ class Soap(callbacks.Plugin):
         if conn.rconState == RconStatus.IDLE:
             conn.rconState = RconStatus.RESTARTSAVED
             command = 'save autosave/autosavesoap'
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -939,6 +959,7 @@ class Soap(callbacks.Plugin):
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
             irc.reply('Performing content update')
         else:
@@ -973,6 +994,7 @@ class Soap(callbacks.Plugin):
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -1007,6 +1029,7 @@ class Soap(callbacks.Plugin):
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -1038,6 +1061,7 @@ class Soap(callbacks.Plugin):
                 'results':Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
     save = wrap(save, [optional('text')])
 
@@ -1058,6 +1082,7 @@ class Soap(callbacks.Plugin):
             conn.rconCommands.put('pause')
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -1086,6 +1111,7 @@ class Soap(callbacks.Plugin):
             conn.rconCommands.put('unpause')
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -1111,6 +1137,7 @@ class Soap(callbacks.Plugin):
             conn.rconCommands.put('unpause')
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
+            conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
             conn.send_packet(AdminRcon, command = command)
         else:
             message = 'Sorry, still processing previous rcon command'
@@ -1360,6 +1387,29 @@ class Soap(callbacks.Plugin):
         irc.reply(utils.playercount(conn))
     playercount = wrap(playercount, [optional('text')])
 
+    def toggledebug(self, irc, msg, args, serverID):
+        """ [Server ID or channel]
+
+        Toggles debug logging for the connection. The debug info will be logged
+        to the standard gamelog
+        """
+
+        source, conn = self._ircCommandInit(irc, msg, serverID, False)
+        if not conn:
+            return
+
+        if conn.connectionstate != ConnectionState.CONNECTED:
+            irc.reply('Not connected!!', prefixNick = False)
+            return
+
+        if conn.debugLog:
+            conn.debugLog = False
+            irc.reply('Debug logging is now: OFF')
+        else:
+            conn.debugLog = True
+            irc.reply('Debug logging is now: ON')
+    toggledebug = wrap(toggledebug, [optional('text')])
+
     def setdef(self, irc, msg, args, serverID):
         """ [Server ID or channel]
 
@@ -1390,6 +1440,7 @@ class Soap(callbacks.Plugin):
                     conn.rconCommands.put(item)
                 conn.rconState = RconStatus.ACTIVE
                 command = conn.rconCommands.get()
+                conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
                 conn.send_packet(AdminRcon, command = command)
                 irc.reply('Setting default settings: %s' % format('%L', commandlist))
             else:
