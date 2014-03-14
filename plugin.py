@@ -332,7 +332,7 @@ class Soap(callbacks.Plugin):
                         conn.logger.debug(logMessage)
                         utils.disconnect(conn, True)
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.001)
             # lets not use up 100% cpu if there are no active connections
             else:
                 time.sleep(1)
@@ -1404,10 +1404,12 @@ class Soap(callbacks.Plugin):
 
         if conn.debugLog:
             conn.debugLog = False
-            irc.reply('Debug logging is now: OFF')
+            irc.reply('Debug logging for %s is now: off' % conn.ID)
+            conn.logger.info('>> Debug logging turned off <<')
         else:
             conn.debugLog = True
-            irc.reply('Debug logging is now: ON')
+            irc.reply('Debug logging for %s is now: ON' % conn.ID)
+            conn.logger.info('>> Debug logging turned ON <<')
     toggledebug = wrap(toggledebug, [optional('text')])
 
     def setdef(self, irc, msg, args, serverID):
