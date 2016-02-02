@@ -1,14 +1,10 @@
-# Suds
+# Suds from /r/openttd
 ### A Supybot Plugin for communicating with OpenTTD servers via the AdminPort interface
 ____
 
 This plugin is released under the GPL, a copy of which has been included in COPYING.txt
-
-web: http://dev.openttdcoop.org/projects/soap/
-IRC: I can usually be found in #openttd on OFTC
-
-
 ____
+
 #### Prerequisites
  * working OpenTTD server (optionally OFS installed and configured)
  * Supybot set up in a channel
@@ -116,7 +112,6 @@ Publicly available commands
 
 
 ### Credit where credit is due
-* Taede Werkhoven: For writing the plugin
-* Planetmaker: Gave me the idea to write this plugin
-* Xaroth: For writing libottdadmin2, which also served as an example for Soap
+* Taede Werkhoven: For writing SOAP, which this plugin is derived from
+* Xaroth: For writing libottdadmin2
 * Dihedral: generated passwords.txt from OpenTTD source
