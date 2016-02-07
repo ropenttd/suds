@@ -190,11 +190,10 @@ def moveToSpectators(irc, conn, client):
 
     conn.send_packet(AdminRcon, command = command)
     conn.send_packet(AdminChat,
-        action = Action.CHAT,
-        destType = DestType.BROADCAST,
-        clientID = ClientID.SERVER,
+        action = Action.CHAT_CLIENT,
+        destType = DestType.CLIENT,
+        clientID = client.id,
         message = text)
-    msgChannel(irc, conn.channel, text)
 
 def playercount(conn):
     clients = len(conn.clients)

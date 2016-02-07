@@ -550,6 +550,45 @@ class Soap(callbacks.Plugin):
                     destType = DestType.BROADCAST,
                     clientID = ClientID.SERVER,
                     message = text)
+            elif message.startswith('!resetme') or message.startswith('!reset'):
+                if client.play_as == 255:
+                    conn.send_packet(AdminChat,
+                    action = Action.CHAT_CLIENT,
+                    destType = DestType.CLIENT,
+                    clientID = client.id,
+                    message = 'You can\'t dissolve the spectators, that\'d be silly!')
+                else:
+                    companyparticipants = []
+                    companyID = client.play_as
+                    companyclients = 0
+                    for c in conn.clients.values():
+                        if client.play_as == companyID:
+                            companyclients+1
+                    if (companyclients > 1):
+                        conn.send_packet(AdminChat,
+                        action = Action.CHAT_CLIENT,
+                        destType = DestType.CLIENT,
+                        clientID = client.id,
+                        message = 'Your company has other players in it - get them to leave before resetting!')
+                    else:
+                        company = conn.companies.get(client.play_as)
+                        self.log.info('Resetting company %s (%s)' % (company.id+1, company.name))
+                        # notify the public
+                        text = '*** %s has reset his/her company (%s)' % (clientName, company.name)
+                        utils.msgChannel(irc, conn.channel, text)
+                        conn.send_packet(AdminChat,
+                        action = Action.CHAT,
+                        destType = DestType.BROADCAST,
+                        clientID = ClientID.SERVER,
+                        message = text)
+                        # move the client out of the company
+                        command = 'move %s 255' % client.id
+                        conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
+                        conn.send_packet(AdminRcon, command = command)
+                        # reset the company
+                        command = 'reset_company %s' % (company.id+1)
+                        conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
+                        conn.send_packet(AdminRcon, command = command)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             if not isinstance(client, (long, int)):
                 company = conn.companies.get(client.play_as)
