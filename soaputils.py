@@ -183,16 +183,15 @@ def msgChannel(irc, channel, msg):
     if channel in irc.state.channels or irc.isNick(channel):
         irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
-global _playerMoveCounter = dict()
-def moveToSpectators(irc, conn, client, kickCount):
-    if client.id in _playerMoveCounter:
-        _playerMoveCounter[client.id] += 1
+def moveToSpectators(irc, conn, client, kickCount, kickDict):
+    if client.id in kickDict:
+        kickDict[client.id] += 1
     else:
-        _playerMoveCounter[client.id] = 1
+        kickDict[client.id] = 1
 		
-	msgChannel(irc, conn.channel, str(_playerMoveCounter))
+	msgChannel(irc, conn.channel, str(kickDict))
 
-    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, _playerMoveCounter[client.id], kickCount)
+    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, kickDict[client.id], kickCount)
     command = 'move %s 255' % client.id
     conn.rcon = conn.channel
     conn.send_packet(AdminRcon, command = command)
@@ -203,7 +202,7 @@ def moveToSpectators(irc, conn, client, kickCount):
         message = text)
     conn.send_packet(AdminRcon, command = command)
 
-    if _playerMoveCounter[client.id] >= kickCount:
+    if kickDict[client.id] >= kickCount:
         text = 'Kicking %s for reaching name change warning count' % client.name
         command = 'kick %s' % client.id
         conn.rcon = conn.channel

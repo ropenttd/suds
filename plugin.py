@@ -66,6 +66,7 @@ class Soap(callbacks.Plugin):
             name = 'SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
+		self.kickdict = dict()
 
     def die(self):
         for conn in self.connections.itervalues():
@@ -619,7 +620,7 @@ class Soap(callbacks.Plugin):
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
             kickcount = self.registryValue('playerKickCount', conn.channel)
             if clientName.lower().startswith('player') and not playAsPlayer:
-                utils.moveToSpectators(irc, conn, client, kickcount)
+                utils.moveToSpectators(irc, conn, client, kickcount, self.kickdict)
         elif action == Action.COMPANY_SPECTATOR:
             text = '*** %s has joined spectators' % clientName
             utils.msgChannel(irc, conn.channel, text)
