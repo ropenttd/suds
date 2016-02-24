@@ -530,7 +530,7 @@ class Soap(callbacks.Plugin):
                 demand = message.partition(' ')[2]
                 demand = demand.strip()
                 if len(demand) > 0:
-                    text = '*[ADM]* %s requested an admin (reason: %s)' % clientName
+                    text = '*[ADM]* %s requested an admin (reason: %s)' % (clientName, demand)
                     utils.msgChannel(irc, conn.channel, text)
                     conn.send_packet(AdminChat,
                         action = Action.CHAT,
