@@ -607,8 +607,9 @@ class Soap(callbacks.Plugin):
                 conn.logger.info(logMessage)
 
             playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
+            kickcount = self.registryValue('playerKickCount', conn.channel)
             if clientName.lower().startswith('player') and not playAsPlayer:
-                utils.moveToSpectators(irc, conn, client)
+                utils.moveToSpectators(irc, conn, client, kickcount)
         elif action == Action.COMPANY_SPECTATOR:
             text = '*** %s has joined spectators' % clientName
             utils.msgChannel(irc, conn.channel, text)
