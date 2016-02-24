@@ -183,7 +183,7 @@ def msgChannel(irc, channel, msg):
     if channel in irc.state.channels or irc.isNick(channel):
         irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
-_playerMoveCounter = dict()
+global _playerMoveCounter = dict()
 def moveToSpectators(irc, conn, client, kickCount):
     if client.id in _playerMoveCounter:
         _playerMoveCounter[client.id] += 1
