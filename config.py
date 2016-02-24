@@ -93,7 +93,7 @@ conf.registerChannelValue(Soap, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
     name. False will get them moved to spectators any time they try to join a
     company, and eventually kicked """))
-	conf.registerChannelValue(Soap, 'playerKickCount',
+conf.registerChannelValue(Soap, 'playerKickCount',
     registry.Integer(3, """ The number of times a player can attempt to join
     a company before they are automatically kicked. Setting to 0 will kick
     on the first infraction. """))
