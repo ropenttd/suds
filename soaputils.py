@@ -190,7 +190,7 @@ def moveToSpectators(irc, conn, client, kickCount):
     else:
         _playerMoveCounter[client.id] = 1
 
-    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s of %s before kick)' % (client.name, _playerMoveCounter[client.id], kickCount)
+    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, _playerMoveCounter[client.id], kickCount)
     command = 'move %s 255' % client.id
     conn.rcon = conn.channel
     conn.send_packet(AdminRcon, command = command)
@@ -199,18 +199,19 @@ def moveToSpectators(irc, conn, client, kickCount):
         destType = DestType.CLIENT,
         clientID = client.id,
         message = text)
+    conn.send_packet(AdminRcon, command = command)
 
     if _playerMoveCounter[client.id] >= kickCount:
-        text = 'Kicked %s for reaching name change warning count' % client.name
+        text = 'Kicking %s for reaching name change warning count' % client.name
         command = 'kick %s' % client.id
         conn.rcon = conn.channel
-        conn.send_packet(AdminRcon, command = command)
         conn.send_packet(AdminChat,
             action = Action.CHAT,
             destType = DestType.BROADCAST,
             clientID = ClientID.SERVER,
             message = text)
         msgChannel(irc, conn.channel, text)
+        conn.send_packet(AdminRcon, command = command)
 
 def playercount(conn):
     clients = len(conn.clients)
