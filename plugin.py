@@ -527,13 +527,23 @@ class Soap(callbacks.Plugin):
             text = '<%s> %s' % (clientName, message)
             utils.msgChannel(irc, conn.channel, text)
             if message.startswith('!admin'):
-                text = '*** %s has requested an admin. (Note: Admin will read back on irc, so please do already write down your request, no need to wait.)' % clientName
-                utils.msgChannel(irc, conn.channel, text)
-                conn.send_packet(AdminChat,
-                    action = Action.CHAT,
-                    destType = DestType.BROADCAST,
-                    clientID = ClientID.SERVER,
-                    message = text)
+                demand = message.partition(' ')[2]
+                demand = demand.strip()
+                if len(demand) > 0:
+                    text = '*[ADM]* %s requested an admin (reason: %s)' % clientName
+                    utils.msgChannel(irc, conn.channel, text)
+                    conn.send_packet(AdminChat,
+                        action = Action.CHAT,
+                        destType = DestType.BROADCAST,
+                        clientID = ClientID.SERVER,
+                        message = text)
+                else:
+                    text = 'You\'re about to call for an admin to attend - abusing this can result in severe penalties. To use this command, use !admin + a reason'
+                    conn.send_packet(AdminChat,
+                        action = Action.CHAT,
+                        destType = DestType.BROADCAST,
+                        clientID = ClientID.SERVER,
+                        message = text)
             elif message.startswith('!nick ') or message.startswith('!name '):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
