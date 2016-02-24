@@ -200,8 +200,8 @@ def moveToSpectators(irc, conn, client, kickCount):
         clientID = client.id,
         message = text)
 
-    if _playerMoveCounter[client.id] > kickCount:
-        text = 'Kicked %s for exceeding name change warning count' % client.name
+    if _playerMoveCounter[client.id] >= kickCount:
+        text = 'Kicked %s for reaching name change warning count' % client.name
         command = 'kick %s' % client.id
         conn.rcon = conn.channel
         conn.send_packet(AdminRcon, command = command)
