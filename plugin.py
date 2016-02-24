@@ -66,7 +66,7 @@ class Soap(callbacks.Plugin):
             name = 'SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
-		self.kickdict = dict()
+        self.kickdict = dict()
 
     def die(self):
         for conn in self.connections.itervalues():

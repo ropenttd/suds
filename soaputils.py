@@ -189,7 +189,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
     else:
         kickDict[client.id] = 1
 		
-	msgChannel(irc, conn.channel, str(kickDict))
+    msgChannel(irc, conn.channel, str(kickDict))
 
     text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, kickDict[client.id], kickCount)
     command = 'move %s 255' % client.id
