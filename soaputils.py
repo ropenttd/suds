@@ -189,15 +189,17 @@ def moveToSpectators(irc, conn, client, kickCount):
         _playerMoveCounter[client.id] += 1
     else:
         _playerMoveCounter[client.id] = 1
+		
+	msgChannel(irc, conn.channel, str(_playerMoveCounter))
 
     text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, _playerMoveCounter[client.id], kickCount)
     command = 'move %s 255' % client.id
     conn.rcon = conn.channel
     conn.send_packet(AdminRcon, command = command)
     conn.send_packet(AdminChat,
-        action = Action.CHAT_CLIENT,
-        destType = DestType.CLIENT,
-        clientID = client.id,
+        action = Action.CHAT,
+        destType = DestType.BROADCAST,
+        clientID = ClientID.SERVER,
         message = text)
     conn.send_packet(AdminRcon, command = command)
 
