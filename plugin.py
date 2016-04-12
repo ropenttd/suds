@@ -1565,7 +1565,7 @@ class Soap(callbacks.Plugin):
             return
 
         actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars, source)
-        if actionChar in text[:1]:
+        if actionChar and actionChar in text[:1]:
             return
         if not 'ACTION' in text:
             message = 'IRC <%s> %s' % (msg.nick, text)
