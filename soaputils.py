@@ -151,11 +151,15 @@ def getConnection(connections, channels, source, serverID = None):
             conn = connections.get(source)
     else:
         if ircutils.isChannel(serverID):
-            conn = connections.get(serverID)
-        else:
-            for c in connections.itervalues():
-                if c.ID == serverID.lower():
-                    conn = c
+            conn = connections.get(serverID)        
+
+    serverID = serverID and serverID.lower() or 'default'
+    
+    if not conn:
+        for c in connections.itervalues():
+            if c.ID == serverID:
+                conn = c
+
     return conn
 
 def getConnectionID(conn):
