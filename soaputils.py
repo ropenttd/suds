@@ -191,8 +191,7 @@ def msgChannel(irc, channel, msg):
         irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
 def checkIP(irc, conn, client):
-    # client.hostname
-    result = requests.get("http://check.getipintel.net/check.php?ip=" + "109.149.139.17" + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
+    result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
     if (result.status_code != 200):
         msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s." % client.name))
         return
