@@ -23,7 +23,7 @@ import supybot.world as world
 
 # Use this for the version of this plugin.  You may wish to put a CVS keyword
 # in here if you're keeping the plugin in CVS or some similar system.
-__version__ = "1"
+__version__ = "SUDS"
 
 # XXX Replace this with an appropriate author or supybot.Author instance.
 __author__ = supybot.Author('Taede Werkhoven', 'TWerkhoven', 't.werkhoven@turbulent-t.com')
@@ -33,7 +33,7 @@ __author__ = supybot.Author('Taede Werkhoven', 'TWerkhoven', 't.werkhoven@turbul
 __contributors__ = {}
 
 # This is a url where the most recent plugin package can be downloaded.
-__url__ = 'http://dev.openttdcoop.org/projects/soap/'
+__url__ = 'https://github.com/luaduck/suds'
 
 import config
 import enums

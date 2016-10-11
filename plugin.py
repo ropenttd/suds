@@ -37,14 +37,14 @@ from libottdadmin2.constants import *
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
 
-class Soap(callbacks.Plugin):
+class Suds(callbacks.Plugin):
     """
     This plug-in allows supybot to interface to OpenTTD via its built-in
     adminport protocol
     """
 
     def __init__(self, irc):
-        self.__parent = super(Soap, self)
+        self.__parent = super(Suds, self)
         self.__parent.__init__(irc)
 
         self._pollObj = poll()
@@ -462,6 +462,9 @@ class Soap(callbacks.Plugin):
         conn.logger.info(logMessage)
         utils.msgChannel(irc, conn.channel, text)
 
+        if self.registryValue('checkClientVPN', conn.channel):
+            utils.checkIP(irc, conn, client)
+
         welcome = self.registryValue('welcomeMessage', conn.channel)
         if welcome:
             replacements = {
@@ -476,11 +479,6 @@ class Soap(callbacks.Plugin):
                     destType = DestType.CLIENT,
                     clientID = client.id,
                     message = line)
-
-        if not client.play_as == 255 and client.name.lower().startswith('player'):
-            playAsPlayer = self.registryValue('playAsPlayer', conn.channel)
-            if not playAsPlayer:
-                utils.moveToSpectators(irc, conn, client)
 
     def _rcvClientUpdate(self, connChan, old, client, changed):
         conn = self.connections.get(connChan)
@@ -512,6 +510,10 @@ class Soap(callbacks.Plugin):
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s, Reason: \'%s\')' % (
                 client.name, client.hostname, client.id, reason)
             conn.logger.info(logMessage)
+
+            # garbage collect the kickdict
+            if client.id in self.kickdict:
+                del self.kickdict[client.id]
 
     def _rcvChat(self, connChan, client, action, destType, clientID, message, data):
         conn = self.connections.get(connChan)
@@ -1696,6 +1698,6 @@ class Soap(callbacks.Plugin):
         cmdThread.start()
     update = wrap(update, [optional('text')])
 
-Class = Soap
+Class = Suds
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:

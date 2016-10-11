@@ -24,6 +24,9 @@ import logging.handlers
 import os.path
 import re
 import urllib2
+import requests
+import sys
+import json
 
 from enums import *
 from libottdadmin2.enums import Colour, Action, DestType, ClientID
@@ -187,13 +190,56 @@ def msgChannel(irc, channel, msg):
     if channel in irc.state.channels or irc.isNick(channel):
         irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
+def checkIP(irc, conn, client):
+    # client.hostname
+    result = requests.get("http://check.getipintel.net/check.php?ip=" + "109.149.139.17" + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
+    if (result.status_code != 200):
+        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s." % client.name))
+        return
+    result = json.loads(result.text)
+    conn.logger.debug('>>--DEBUG--<< CheckIP result: %s' % str(result))
+
+    if float(result['result']) < 0:
+        msgChannel(irc, conn.channel, str("*** There was a problem validating %s. The error was: %s" % (client.name, result['message'])))
+    elif float(result['result']) == 1:
+        conn.send_packet(AdminChat,
+                         action=Action.CHAT_CLIENT,
+                         destType=DestType.CLIENT,
+                         clientID=client.id,
+                         message='Sorry, connecting from a VPN or proxy is not allowed! Please disable any such software and try again. If you think this is an error, please contact us.')
+        text = '*** %s was trying to connect from a VPN or proxy in %s, which is not allowed.' % (client.name, result['Country'])
+        command = 'ban %s' % client.id
+        conn.rcon = conn.channel
+        conn.send_packet(AdminChat,
+                         action=Action.CHAT,
+                         destType=DestType.BROADCAST,
+                         clientID=ClientID.SERVER,
+                         message=text)
+        msgChannel(irc, conn.channel, text)
+        conn.send_packet(AdminRcon, command=command)
+    elif float(result['result']) > 0.90 or result['BadIP'] == 1:
+        text = '*** %s MIGHT BE CONNECTING VIA A PROXY IN %s. %.2f certainty. BadIP: %r.' % (client.name, result['Country'], float(result['result'])*100, bool(result['BadIP']))
+        conn.send_packet(AdminChat,
+                         action=Action.CHAT,
+                         destType=DestType.BROADCAST,
+                         clientID=ClientID.SERVER,
+                         message=text)
+        msgChannel(irc, conn.channel, text)
+    else:
+        text = '*** %s is a valid player from %s.' % (client.name, result['Country'])
+        conn.send_packet(AdminChat,
+                         action=Action.CHAT,
+                         destType=DestType.BROADCAST,
+                         clientID=ClientID.SERVER,
+                         message=text)
+        msgChannel(irc, conn.channel, text)
+    return
+
 def moveToSpectators(irc, conn, client, kickCount, kickDict):
     if client.id in kickDict:
         kickDict[client.id] += 1
     else:
         kickDict[client.id] = 1
-		
-    msgChannel(irc, conn.channel, str(kickDict))
 
     text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, kickDict[client.id], kickCount)
     command = 'move %s 255' % client.id
@@ -206,7 +252,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
         message = text)
     conn.send_packet(AdminRcon, command = command)
 
-    if kickDict[client.id] >= kickCount:
+    if kickDict is not None and kickDict[client.id] >= kickCount:
         text = 'Kicking %s for reaching name change warning count' % client.name
         command = 'kick %s' % client.id
         conn.rcon = conn.channel
