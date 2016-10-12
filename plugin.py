@@ -488,7 +488,7 @@ class Suds(callbacks.Plugin):
 
         if 'name' in changed:
             text = '*** %s has changed his/her name to %s' % (
-                old.name, client.name)
+                old.name, client.name.decode('utf-8'))
             utils.msgChannel(conn.irc, conn.channel, text)
             logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (
                 old.name, client.name, client.hostname)
@@ -505,7 +505,7 @@ class Suds(callbacks.Plugin):
                 reason = '%s' % utils.getQuitReasonFromNumber(errorcode)
             else:
                 reason = 'Leaving'
-            text = '*** %s has left the game (%s)' % (client.name, reason)
+            text = '*** %s has left the game (%s)' % (client.name.decode('utf-8'), reason)
             utils.msgChannel(irc, conn.channel, text)
             logMessage = '<QUIT> Name: \'%s\' (Host: %s, ClientID: %s, Reason: \'%s\')' % (
                 client.name, client.hostname, client.id, reason)

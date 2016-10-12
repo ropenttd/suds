@@ -193,20 +193,20 @@ def msgChannel(irc, channel, msg):
 def checkIP(irc, conn, client):
     result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
     if (result.status_code != 200):
-        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s." % client.name))
+        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s." % client.name.decode('utf-8')))
         return
     result = json.loads(result.text)
     conn.logger.debug('>>--DEBUG--<< CheckIP result: %s' % str(result))
 
     if float(result['result']) < 0:
-        msgChannel(irc, conn.channel, str("*** There was a problem validating %s. The error was: %s" % (client.name, result['message'])))
+        msgChannel(irc, conn.channel, "*** There was a problem validating %s. The error was: %s" % (client.name.decode('utf-8'), result['message']))
     elif float(result['result']) == 1:
         conn.send_packet(AdminChat,
                          action=Action.CHAT_CLIENT,
                          destType=DestType.CLIENT,
                          clientID=client.id,
                          message='Sorry, connecting from a VPN or proxy is not allowed! Please disable any such software and try again. If you think this is an error, please contact us.')
-        text = '*** %s was trying to connect from a VPN or proxy in %s, which is not allowed.' % (client.name, result['Country'])
+        text = '*** %s was trying to connect from a VPN or proxy in %s, which is not allowed.' % (client.name.decode('utf-8'), result['Country'])
         command = 'ban %s' % client.id
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
@@ -217,7 +217,7 @@ def checkIP(irc, conn, client):
         msgChannel(irc, conn.channel, text)
         conn.send_packet(AdminRcon, command=command)
     elif float(result['result']) > 0.90 or result['BadIP'] == 1:
-        text = '*** %s MIGHT BE CONNECTING VIA A PROXY IN %s. %.2f certainty. BadIP: %r.' % (client.name, result['Country'], float(result['result'])*100, bool(result['BadIP']))
+        text = '*** %s MIGHT BE CONNECTING VIA A PROXY IN %s. %.2f certainty. BadIP: %r.' % (client.name.decode('utf-8'), result['Country'], float(result['result'])*100, bool(result['BadIP']))
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
                          destType=DestType.BROADCAST,
@@ -225,7 +225,7 @@ def checkIP(irc, conn, client):
                          message=text)
         msgChannel(irc, conn.channel, text)
     else:
-        text = '*** %s is a valid player from %s.' % (client.name, result['Country'])
+        text = '*** %s is a valid player from %s.' % (client.name.decode('utf-8'), result['Country'])
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
                          destType=DestType.BROADCAST,
@@ -240,7 +240,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
     else:
         kickDict[client.id] = 1
 
-    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, kickDict[client.id], kickCount)
+    text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name.decode('utf-8'), kickDict[client.id], kickCount)
     command = 'move %s 255' % client.id
     conn.rcon = conn.channel
     conn.send_packet(AdminRcon, command = command)
@@ -252,7 +252,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
     conn.send_packet(AdminRcon, command = command)
 
     if kickDict is not None and kickDict[client.id] >= kickCount:
-        text = 'Kicking %s for reaching name change warning count' % client.name
+        text = 'Kicking %s for reaching name change warning count' % client.name.decode('utf-8')
         command = 'kick %s' % client.id
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
