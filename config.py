@@ -92,6 +92,8 @@ conf.registerChannelValue(Suds, 'minPlayers',
 conf.registerChannelValue(Suds, 'checkClientVPN',
     registry.Boolean(False, """ True means players will have their IP checked for
      known VPN or other such ban evasion techniques, and kicked if they are using them."""))
+conf.registerGlobalValue(Suds, 'checkClientVPNWhitelist',
+    SemicolonSeparatedListOfStrings('', """If checkClientVPN is enabled, you can disable checking certain IPs here. Semicolon delimited."""))
 conf.registerChannelValue(Suds, 'playAsPlayer',
     registry.Boolean(True, """ True means players can play with Player as their
     name. False will get them moved to spectators any time they try to join a
