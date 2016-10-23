@@ -201,15 +201,19 @@ def checkIP(irc, conn, client, whitelist):
                          message=text)
         msgChannel(irc, conn.channel, text)
         return
-	try:
-		result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
-	except requests.exceptions.RequestException as e:
-		msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check {name}. Timeout?".format(name=client.name)))
-		return
-    if (result.status_code != 200):
-        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s. Status error?" % client.name))
+    result = None
+    try:
+        result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
+        if (result.status_code != 200):
+            msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s. Status error?" % client.name))
+            return
+        result = json.loads(result.text)
+    except requests.exceptions.RequestException as e:
+        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check {name}. Timeout?".format(name=client.name)))
         return
-    result = json.loads(result.text)
+    if (result == None):
+        msgChannel(irc, conn.channel,"*** *[ADM]* Received NONE during checkIP (this should never happen!)?")
+        return
     conn.logger.debug('>>--DEBUG--<< CheckIP result: %s' % str(result))
 
     if float(result['result']) < 0:
