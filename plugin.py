@@ -67,6 +67,7 @@ class Suds(callbacks.Plugin):
         self.pollingThread.daemon = True
         self.pollingThread.start()
         self.kickdict = dict()
+        self.ipdict = dict()
 
     def die(self):
         for conn in self.connections.itervalues():
@@ -463,7 +464,7 @@ class Suds(callbacks.Plugin):
         utils.msgChannel(irc, conn.channel, text)
 
         if self.registryValue('checkClientVPN', conn.channel):
-            utils.checkIP(irc, conn, client, self.registryValue('checkClientVPNWhitelist'))
+            utils.checkIP(irc, conn, client, self.registryValue('checkClientVPNWhitelist'), self.ipdict)
 
         welcome = self.registryValue('welcomeMessage', conn.channel)
         if welcome:

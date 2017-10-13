@@ -27,6 +27,7 @@ import urllib2
 import requests
 import sys
 import json
+from datetime import datetime, timedelta
 
 from enums import *
 from libottdadmin2.enums import Colour, Action, DestType, ClientID
@@ -190,7 +191,7 @@ def msgChannel(irc, channel, msg):
     if channel in irc.state.channels or irc.isNick(channel):
         irc.queueMsg(ircmsgs.privmsg(channel, msg))
 
-def checkIP(irc, conn, client, whitelist):
+def checkIP(irc, conn, client, whitelist, checkedDict):
 
     if client.hostname in whitelist:
         text = '*** {name} is a whitelisted player, and will not be checked.'.format(name=client.name)
@@ -202,19 +203,32 @@ def checkIP(irc, conn, client, whitelist):
         msgChannel(irc, conn.channel, text)
         return
     result = None
-    try:
-        result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
-        if (result.status_code != 200):
-            msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s. Status error?" % client.name))
+
+    if client.hostname not in checkedDict \
+    and not checkedDict.get(client.hostname, {}).get('message', False) \
+    and checkedDict.get(client.hostname, {})['timestamp'] >= (datetime.utcnow() - timedelta(days=1)):
+        try:
+            result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "abuse@ttdredd.it",timeout=5.00)
+            if (result.status_code != 200):
+                msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s. Status error?" % client.name))
+                return
+            result = json.loads(result.text)
+        except requests.exceptions.RequestException as e:
+            msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check {name}. Timeout?".format(name=client.name)))
             return
-        result = json.loads(result.text)
-    except requests.exceptions.RequestException as e:
-        msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check {name}. Timeout?".format(name=client.name)))
-        return
-    if (result == None):
-        msgChannel(irc, conn.channel,"*** *[ADM]* Received NONE during checkIP (this should never happen!)?")
-        return
-    conn.logger.debug('>>--DEBUG--<< CheckIP result: %s' % str(result))
+
+        if (result == None):
+            msgChannel(irc, conn.channel,"*** *[ADM]* Received NONE during checkIP (this should never happen!)")
+            return
+        conn.logger.debug('>>--DEBUG--<< CheckIP result: %s' % str(result))
+        if result['result'] < 0:
+
+            checkedDict[client.hostname] = {'result': result['result'], 'BadIP': result.get('BadIP', 0), 'Country': result['Country'], 'timestamp': datetime.utcnow()}
+        else:
+            checkedDict[client.hostname] = {'result': result['result'], 'message': result.get('message', 'Unknown failure'), 'timestamp': datetime.utcnow()}
+    else:
+        conn.logger.debug('>>--DEBUG--<< Using cached result for IP: %s' % client.hostname)
+        result = checkedDict[client.hostname]
 
     if float(result['result']) < 0:
         msgChannel(irc, conn.channel, "*** There was a problem validating {name}. The error was: {error}".format(name=client.name, error=result['message']))
