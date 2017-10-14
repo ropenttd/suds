@@ -208,7 +208,7 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
     or not checkedDict.get(client.hostname, {}).get('message', False) \
     or checkedDict.get(client.hostname, {})['timestamp'] >= (datetime.utcnow() - timedelta(days=1)):
         try:
-            result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "duck+abuse@duck.me.uk",timeout=5.00)
+            result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "ttd-abuse@duck.me.uk",timeout=5.00)
             if (result.status_code != 200):
                 msgChannel(irc, conn.channel, str("*** *[ADM]* Couldn\'t contact validator to check %s. Status error?" % client.name))
                 return
