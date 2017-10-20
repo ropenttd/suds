@@ -248,8 +248,8 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
                          message=text)
         msgChannel(irc, conn.channel, text)
         conn.send_packet(AdminRcon, command=command)
-    elif float(result['result']) > 0.90 or result['BadIP'] == 1:
-        text = str('*** {name} MIGHT BE CONNECTING VIA A PROXY IN {location}. {certainty:.2f} certainty.' + (" Warning: Potential ISP blacklisted address!" if bool(result['BadIP']) else "")).format(name=client.name, location=result['Country'], certainty=float(result['result'])*100)
+    elif float(result['result']) > 0.90 or result.get('BadIP', 0) == 1:
+        text = str('*** {name} MIGHT BE CONNECTING VIA A PROXY IN {location}. {certainty:.2f} certainty.' + (" Warning: Potential ISP blacklisted address!" if bool(result.get('BadIP', False)) else "")).format(name=client.name, location=result['Country'], certainty=float(result['result'])*100)
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
                          destType=DestType.BROADCAST,
