@@ -205,10 +205,10 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
     result = None
 
     # First let's garbage collect
-    for hostname, client in checkedDict.iteritems():
-        if client.get('timestamp') >= (datetime.utcnow() - timedelta(days=1)):
-            conn.logger.debug('>>--DEBUG--<< Garbage collecting expired BadIP result for: %s' % str(hostname))
-            del checkedDict[hostname]
+    # learner's note: you can't just do iteritems() into a del because you'll get a RuntimeError exception when
+    # the dictionary changes size during the loop
+    cutoff = datetime.utcnow() - timedelta(days=1)
+    checkedDict = { k:v for k,v in checkedDict.iteritems() if v.get('timestamp') < cutoff }
 
     if client.hostname not in checkedDict \
     or not checkedDict.get(client.hostname, {}).get('message', False):
