@@ -204,9 +204,14 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
         return
     result = None
 
+    # First let's garbage collect
+    for hostname, client in checkedDict.iteritems():
+        if client.get('timestamp') >= (datetime.utcnow() - timedelta(days=1)):
+            conn.logger.debug('>>--DEBUG--<< Garbage collecting expired BadIP result for: %s' % str(hostname))
+            del checkedDict[hostname]
+
     if client.hostname not in checkedDict \
-    or not checkedDict.get(client.hostname, {}).get('message', False) \
-    or checkedDict.get(client.hostname, {})['timestamp'] >= (datetime.utcnow() - timedelta(days=1)):
+    or not checkedDict.get(client.hostname, {}).get('message', False):
         try:
             result = requests.get("http://check.getipintel.net/check.php?ip=" + client.hostname + "&format=json&oflags=bc&contact=" + "ttd-abuse@duck.me.uk",timeout=5.00)
             if (result.status_code != 200):
@@ -257,7 +262,7 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
                          message=text)
         msgChannel(irc, conn.channel, text)
     else:
-        text = '*** {name} is a valid player from {location}.'.format(name=client.name, location=result['Country'])
+        text = '*** {name} is a valid player from {location}.'.format(name=client.name, location=result.get('Country', 'an unknown country'))
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
                          destType=DestType.BROADCAST,
