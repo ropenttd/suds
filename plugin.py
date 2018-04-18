@@ -457,6 +457,18 @@ class Suds(callbacks.Plugin):
             return
         irc = conn.irc
 
+        if client.name in self.registryValue('nameBlacklist'):
+            text = '*** %s tried to join with a blacklisted name, auto-kicking'
+            logMessage = '<JOIN-AUTOKICK> Name: \'%s\' (Host: %s, ClientID: %s)' % (
+                client.name, client.hostname, client.id)
+            conn.logger.info(logMessage)
+            utils.msgChannel(irc, conn.channel, text)
+
+            command = 'kick %s' % client.id
+            conn.rcon = conn.channel
+            conn.send_packet(AdminRcon, command = command)
+            return
+
         text = '*** %s has joined' % client.name
         logMessage = '<JOIN> Name: \'%s\' (Host: %s, ClientID: %s)' % (
             client.name, client.hostname, client.id)
@@ -469,7 +481,7 @@ class Suds(callbacks.Plugin):
         welcome = self.registryValue('welcomeMessage', conn.channel)
         if welcome:
             replacements = {
-                '{clientname}':client.name,
+                '{clientname}': client.name,
                 '{servername}': conn.serverinfo.name,
                 '{serverversion}': conn.serverinfo.version}
             for line in welcome:
