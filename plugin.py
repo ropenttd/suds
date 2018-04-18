@@ -458,7 +458,7 @@ class Suds(callbacks.Plugin):
         irc = conn.irc
 
         if client.name in self.registryValue('nameBlacklist'):
-            text = '*** %s tried to join with a blacklisted name, auto-kicking'
+            text = '*** %s tried to join with a blacklisted name, auto-kicking' % client.name
             logMessage = '<JOIN-AUTOKICK> Name: \'%s\' (Host: %s, ClientID: %s)' % (
                 client.name, client.hostname, client.id)
             conn.logger.info(logMessage)
