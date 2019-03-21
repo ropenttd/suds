@@ -864,7 +864,10 @@ class Suds(callbacks.Plugin):
         if conn.connectionstate != ConnectionState.CONNECTED:
             irc.reply('Not connected!!', prefixNick = False)
             return
-        message = '%s' % conn.date.strftime('%b %d %Y')
+
+        # This is done in a slightly weird way because dates earlier than 1900 are possible in OpenTTD
+        # and strftime (in Python 2 at least) doesn't allow for dates before then
+        message = '{0.day:02d}/{0.month:02d}/{0.year:4d}'.format(conn.date)
         irc.reply(message, prefixNick = False)
     date = wrap(date, [optional('text')])
 
@@ -1261,7 +1264,10 @@ class Suds(callbacks.Plugin):
             ip = ', address: %s' % ip
         else:
             ip = ''
-        date = conn.date.strftime('%b %d %Y')
+
+        # This is done in a slightly weird way because dates earlier than 1900 are possible in OpenTTD
+        # and strftime (in Python 2 at least) doesn't allow for dates before then
+        date = '{0.day:02d}/{0.month:02d}/{0.year:4d}'.format(conn.date)
         clients = len(conn.clients)
         if conn.serverinfo.dedicated:
             clients -= 1 # deduct server-client for dedicated servers
