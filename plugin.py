@@ -500,7 +500,7 @@ class Suds(callbacks.Plugin):
         irc = conn.irc
 
         if 'name' in changed:
-            text = '*** %s has changed his/her name to %s' % (
+            text = '*** %s has changed their name to %s' % (
                 old.name, client.name)
             utils.msgChannel(conn.irc, conn.channel, text)
             logMessage = '<NAMECHANGE> Old name: \'%s\' New Name: \'%s\' (Host: %s)' % (
@@ -600,7 +600,7 @@ class Suds(callbacks.Plugin):
                         company = conn.companies.get(client.play_as)
                         self.log.info('Resetting company %s (%s)' % (company.id+1, company.name))
                         # notify the public
-                        text = '*** %s has reset his/her company (%s)' % (clientName, company.name)
+                        text = '*** %s has reset their company (%s)' % (clientName, company.name)
                         utils.msgChannel(irc, conn.channel, text)
                         conn.send_packet(AdminChat,
                         action = Action.CHAT,
