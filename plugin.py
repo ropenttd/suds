@@ -37,6 +37,7 @@ from libottdadmin2.constants import *
 from libottdadmin2.enums import *
 from libottdadmin2.packets import *
 
+
 class Suds(callbacks.Plugin):
     """
     This plug-in allows supybot to interface to OpenTTD via its built-in
@@ -62,8 +63,8 @@ class Suds(callbacks.Plugin):
                 self._connectOTTD(irc, conn, channel)
         self.stopPoll = threading.Event()
         self.pollingThread = threading.Thread(
-            target = self._pollThread,
-            name = 'SoapPollingThread')
+            target=self._pollThread,
+            name='SoapPollingThread')
         self.pollingThread.daemon = True
         self.pollingThread.start()
         self.kickdict = dict()
@@ -83,7 +84,7 @@ class Suds(callbacks.Plugin):
     def doJoin(self, irc, msg):
         channel = msg.args[0].lower()
         conn = None
-        if msg.nick == irc.nick and self.channels.count(channel) >=1:
+        if msg.nick == irc.nick and self.channels.count(channel) >= 1:
             conn = self.connections.get(channel)
             if not conn:
                 return
@@ -92,32 +93,30 @@ class Suds(callbacks.Plugin):
                     conn.serverinfo.name, conn.serverinfo.version)
                 utils.msgChannel(conn._irc, conn.channel, text)
 
-
-
     # Connection management
 
     def _attachEvents(self, conn):
-        conn.soapEvents.connected       += self._connected
-        conn.soapEvents.disconnected    += self._disconnected
+        conn.soapEvents.connected += self._connected
+        conn.soapEvents.disconnected += self._disconnected
 
-        conn.soapEvents.shutdown        += self._rcvShutdown
-        conn.soapEvents.new_game        += self._rcvNewGame
+        conn.soapEvents.shutdown += self._rcvShutdown
+        conn.soapEvents.new_game += self._rcvNewGame
 
-        conn.soapEvents.new_map         += self._rcvNewMap
+        conn.soapEvents.new_map += self._rcvNewMap
 
-        conn.soapEvents.clientjoin      += self._rcvClientJoin
-        conn.soapEvents.clientupdate    += self._rcvClientUpdate
-        conn.soapEvents.clientquit      += self._rcvClientQuit
+        conn.soapEvents.clientjoin += self._rcvClientJoin
+        conn.soapEvents.clientupdate += self._rcvClientUpdate
+        conn.soapEvents.clientquit += self._rcvClientQuit
 
-        conn.soapEvents.chat            += self._rcvChat
-        conn.soapEvents.rcon            += self._rcvRcon
-        conn.soapEvents.rconend         += self._rcvRconEnd
-        conn.soapEvents.console         += self._rcvConsole
-        conn.soapEvents.cmdlogging      += self._rcvCmdLogging
+        conn.soapEvents.chat += self._rcvChat
+        conn.soapEvents.rcon += self._rcvRcon
+        conn.soapEvents.rconend += self._rcvRconEnd
+        conn.soapEvents.console += self._rcvConsole
+        conn.soapEvents.cmdlogging += self._rcvCmdLogging
 
-        conn.soapEvents.pong            += self._rcvPong
+        conn.soapEvents.pong += self._rcvPong
 
-    def _connectOTTD(self, irc, conn, source = None, text = 'Connecting...'):
+    def _connectOTTD(self, irc, conn, source=None, text='Connecting...'):
         utils.msgChannel(irc, conn.channel, text)
         if source and not source == conn.channel:
             utils.msgChannel(irc, source, text)
@@ -140,16 +139,16 @@ class Suds(callbacks.Plugin):
         if pwInterval != 0:
             connectionid = utils.getConnectionID(conn)
             pwThread = threading.Thread(
-                target = self._passwordThread,
-                name = 'PasswordRotation.%s' % connectionid,
-                args = [conn])
+                target=self._passwordThread,
+                name='PasswordRotation.%s' % connectionid,
+                args=[conn])
             pwThread.daemon = True
             pwThread.start()
         else:
             command = 'set server_password *'
             conn.rconState = RconStatus.ACTIVE
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
             conn.clientPassword = None
 
     def _disconnected(self, connChan, canRetry):
@@ -184,29 +183,27 @@ class Suds(callbacks.Plugin):
             # We didn't disconnect on purpose, set this so we will reconnect
             conn.connectionstate == ConnectionState.DISCONNECTED
             text = 'Attempting to reconnect...'
-            self._connectOTTD(irc, conn, text = text)
+            self._connectOTTD(irc, conn, text=text)
         else:
             conn.connectionstate = ConnectionState.DISCONNECTED
 
     def _initSoapClient(self, conn, irc):
         conn.configure(
-            irc         = irc,
-            ID          = self.registryValue('serverID', conn.channel),
-            password    = self.registryValue('password', conn.channel),
-            host        = self.registryValue('host', conn.channel),
-            port        = self.registryValue('port', conn.channel),
-            name        = '%s-Soap' % irc.nick)
+            irc=irc,
+            ID=self.registryValue('serverID', conn.channel),
+            password=self.registryValue('password', conn.channel),
+            host=self.registryValue('host', conn.channel),
+            port=self.registryValue('port', conn.channel),
+            name='%s-Soap' % irc.nick)
         utils.initLogger(conn, self.registryValue('logdir'), self.registryValue('logHistory'))
         self._pollObj.register(conn.fileno(),
-            POLLIN | POLLERR | POLLHUP | POLLPRI)
+                               POLLIN | POLLERR | POLLHUP | POLLPRI)
         conn.filenumber = conn.fileno()
         self.registeredConnections[conn.filenumber] = conn
 
-
-
     # Thread functions
 
-    def _commandThread(self, conn, irc, ofsCommand, successText = None, delay = 0):
+    def _commandThread(self, conn, irc, ofsCommand, successText=None, delay=0):
         time.sleep(delay)
         ofs = self.registryValue('ofslocation', conn.channel)
         command = ofs.replace('{OFS}', ofsCommand)
@@ -222,10 +219,10 @@ class Suds(callbacks.Plugin):
         if not useshell:
             command = command.split()
         try:
-            commandObject = Popen(command, shell=useshell, stdout = PIPE)
+            commandObject = Popen(command, shell=useshell, stdout=PIPE)
         except OSError as e:
             irc.reply('Couldn\'t start %s, Please review plugins.Soap.ofslocation'
-                % ofsCommand.split()[0])
+                      % ofsCommand.split()[0])
             return
         output = commandObject.stdout.read()
         commandObject.stdout.close()
@@ -247,12 +244,12 @@ class Suds(callbacks.Plugin):
                 irc.reply(utils.ofsTransferSaveExitcodeToText(code))
             else:
                 irc.reply('%s reported an error, exitcode: %s. See bot-log for more information.'
-                    % (ofsFile, code))
+                          % (ofsFile, code))
                 irc.reply('PS this message should not be seen, please thwack Taede to get a proper error message')
             return
         if successText:
             if not ofsCommand.startswith('ofs-start.py'):
-                irc.reply(successText, prefixNick = False)
+                irc.reply(successText, prefixNick=False)
             else:
                 utils.msgChannel(irc, conn.channel, successText)
 
@@ -260,15 +257,15 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.UPDATESAVED
             rconcommand = 'save autosave/autosavesoap'
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = rconcommand)
+            conn.send_packet(AdminRcon, command=rconcommand)
         elif ofsCommand.startswith('ofs-svntobin.py'):
             ofsCommand = 'ofs-start.py'
             successText = 'Server is starting'
             connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
-                target = self._commandThread,
-                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-                args = [conn, irc, ofsCommand, successText])
+                target=self._commandThread,
+                name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+                args=[conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
 
@@ -297,13 +294,13 @@ class Suds(callbacks.Plugin):
                     command = 'set server_password %s' % newPassword
                     conn.rconState = RconStatus.ACTIVE
                     conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                    conn.send_packet(AdminRcon, command = command)
+                    conn.send_packet(AdminRcon, command=command)
                     conn.clientPassword = newPassword
                     time.sleep(interval)
                 else:
                     command = 'set server_password *'
                     conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                    conn.send_packet(AdminRcon, command = command)
+                    conn.send_packet(AdminRcon, command=command)
 
                     conn.clientPassword = None
                     break
@@ -340,8 +337,6 @@ class Suds(callbacks.Plugin):
                 time.sleep(1)
             if self.stopPoll.isSet():
                 break
-
-
 
     # Miscelanious functions
 
@@ -396,8 +391,6 @@ class Suds(callbacks.Plugin):
         else:
             return (None, None, None)
 
-
-
     # Packet Handlers
 
     def _rcvShutdown(self, connChan):
@@ -444,7 +437,7 @@ class Suds(callbacks.Plugin):
         command = 'set min_active_clients %s' % self.registryValue(
             'minPlayers', conn.channel)
         conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-        conn.send_packet(AdminRcon, command = command)
+        conn.send_packet(AdminRcon, command=command)
         logMessage = '-' * 80
         conn.logger.info(logMessage)
         logMessage = '<CONNECTED> Version: %s, Name: \'%s\' Mapname: \'%s\' Mapsize: %dx%d' % (
@@ -466,7 +459,7 @@ class Suds(callbacks.Plugin):
 
             command = 'kick %s "This name is blacklisted - please change your name and rejoin"' % client.id
             conn.rcon = conn.channel
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
             return
 
         text = '*** %s has joined' % client.name
@@ -488,10 +481,10 @@ class Suds(callbacks.Plugin):
                 for word, newword in replacements.iteritems():
                     line = line.replace(word, newword)
                 conn.send_packet(AdminChat,
-                    action = Action.CHAT_CLIENT,
-                    destType = DestType.CLIENT,
-                    clientID = client.id,
-                    message = line)
+                                 action=Action.CHAT_CLIENT,
+                                 destType=DestType.CLIENT,
+                                 clientID=client.id,
+                                 message=line)
 
     def _rcvClientUpdate(self, connChan, old, client, changed):
         conn = self.connections.get(connChan)
@@ -549,86 +542,86 @@ class Suds(callbacks.Plugin):
                     text = '*[ADM]* %s requested an admin (reason: %s)' % (clientName, demand)
                     utils.msgChannel(irc, conn.channel, text)
                     conn.send_packet(AdminChat,
-                        action = Action.CHAT,
-                        destType = DestType.BROADCAST,
-                        clientID = ClientID.SERVER,
-                        message = text)
+                                     action=Action.CHAT,
+                                     destType=DestType.BROADCAST,
+                                     clientID=ClientID.SERVER,
+                                     message=text)
                 else:
                     text = 'You\'re about to call for an admin to attend - abusing this can result in severe penalties. To use this command, use !admin + a reason'
                     conn.send_packet(AdminChat,
-                        action = Action.CHAT,
-                        destType = DestType.BROADCAST,
-                        clientID = ClientID.SERVER,
-                        message = text)
+                                     action=Action.CHAT,
+                                     destType=DestType.BROADCAST,
+                                     clientID=ClientID.SERVER,
+                                     message=text)
             elif message.startswith('!nick ') or message.startswith('!name '):
                 newName = message.partition(' ')[2]
                 newName = newName.strip()
                 if len(newName) > 0:
                     command = 'client_name %s %s' % (clientID, newName)
                     conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                    conn.send_packet(AdminRcon, command = command)
+                    conn.send_packet(AdminRcon, command=command)
             elif message.startswith('!rules') and not rulesUrl.lower() == 'none':
                 self.log.info('should display rules now')
                 text = 'Server rules can be found here: %s' % rulesUrl
                 utils.msgChannel(irc, conn.channel, text)
                 conn.send_packet(AdminChat,
-                    action = Action.CHAT,
-                    destType = DestType.BROADCAST,
-                    clientID = ClientID.SERVER,
-                    message = text)
+                                 action=Action.CHAT,
+                                 destType=DestType.BROADCAST,
+                                 clientID=ClientID.SERVER,
+                                 message=text)
             elif message.startswith('!resetme') or message.startswith('!reset'):
                 if client.play_as == 255:
                     conn.send_packet(AdminChat,
-                    action = Action.CHAT_CLIENT,
-                    destType = DestType.CLIENT,
-                    clientID = client.id,
-                    message = 'You can\'t dissolve the spectators, that\'d be silly!')
+                                     action=Action.CHAT_CLIENT,
+                                     destType=DestType.CLIENT,
+                                     clientID=client.id,
+                                     message='You can\'t dissolve the spectators, that\'d be silly!')
                 else:
                     companyparticipants = []
                     companyID = client.play_as
                     companyclients = 0
                     for c in conn.clients.values():
                         if client.play_as == companyID:
-                            companyclients+1
+                            companyclients + 1
                     if (companyclients > 1):
                         conn.send_packet(AdminChat,
-                        action = Action.CHAT_CLIENT,
-                        destType = DestType.CLIENT,
-                        clientID = client.id,
-                        message = 'Your company has other players in it - get them to leave before resetting!')
+                                         action=Action.CHAT_CLIENT,
+                                         destType=DestType.CLIENT,
+                                         clientID=client.id,
+                                         message='Your company has other players in it - get them to leave before resetting!')
                     else:
                         company = conn.companies.get(client.play_as)
-                        self.log.info('Resetting company %s (%s)' % (company.id+1, company.name))
+                        self.log.info('Resetting company %s (%s)' % (company.id + 1, company.name))
                         # notify the public
                         text = '*** %s has reset their company (%s)' % (clientName, company.name)
                         utils.msgChannel(irc, conn.channel, text)
                         conn.send_packet(AdminChat,
-                        action = Action.CHAT,
-                        destType = DestType.BROADCAST,
-                        clientID = ClientID.SERVER,
-                        message = text)
+                                         action=Action.CHAT,
+                                         destType=DestType.BROADCAST,
+                                         clientID=ClientID.SERVER,
+                                         message=text)
                         # move the client out of the company
                         command = 'move %s 255' % client.id
                         conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                        conn.send_packet(AdminRcon, command = command)
+                        conn.send_packet(AdminRcon, command=command)
                         # reset the company
-                        command = 'reset_company %s' % (company.id+1)
+                        command = 'reset_company %s' % (company.id + 1)
                         conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                        conn.send_packet(AdminRcon, command = command)
+                        conn.send_packet(AdminRcon, command=command)
         elif action == Action.COMPANY_JOIN or action == Action.COMPANY_NEW:
             if not isinstance(client, (long, int)):
                 company = conn.companies.get(client.play_as)
                 if action == Action.COMPANY_JOIN:
                     text = ('*** %s has joined company #%d' %
-                        (client.name, company.id+1))
+                            (client.name, company.id + 1))
                     joining = 'JOIN'
                 else:
                     text = ('*** %s has started a new company #%d' %
-                        (client.name, company.id+1))
+                            (client.name, company.id + 1))
                     joining = 'NEW'
 
                 logMessage = '<COMPANY %s> Name: \'%s\' Company Name: \'%s\' Company ID: %s' % (
-                    joining, clientName, company.name, company.id+1)
+                    joining, clientName, company.name, company.id + 1)
                 utils.msgChannel(irc, conn.channel, text)
                 conn.logger.info(logMessage)
 
@@ -659,29 +652,29 @@ class Suds(callbacks.Plugin):
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
                 conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                conn.send_packet(AdminRcon, command = command)
+                conn.send_packet(AdminRcon, command=command)
             return
         elif conn.rconState == RconStatus.UPDATESAVED:
             if result.startswith('Map successfully saved'):
                 message = 'Game saved. Shutting down server to finish update. We\'ll be back shortly'
                 utils.msgChannel(irc, conn.channel, message)
                 conn.send_packet(AdminChat,
-                    action = Action.CHAT,
-                    destType = DestType.BROADCAST,
-                    clientID = ClientID.SERVER,
-                    message = message)
+                                 action=Action.CHAT,
+                                 destType=DestType.BROADCAST,
+                                 clientID=ClientID.SERVER,
+                                 message=message)
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
                 conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                conn.send_packet(AdminRcon, command = command)
+                conn.send_packet(AdminRcon, command=command)
 
                 ofsCommand = 'ofs-svntobin.py'
                 successText = None
                 connectionid = utils.getConnectionID(conn)
                 cmdThread = threading.Thread(
-                    target = self._commandThread,
-                    name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-                    args = [conn, irc, ofsCommand, successText, 15])
+                    target=self._commandThread,
+                    name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+                    args=[conn, irc, ofsCommand, successText, 15])
                 cmdThread.daemon = True
                 cmdThread.start()
             return
@@ -690,22 +683,22 @@ class Suds(callbacks.Plugin):
                 message = 'Game saved. Restarting server...'
                 utils.msgChannel(irc, conn.channel, message)
                 conn.send_packet(AdminChat,
-                    action = Action.CHAT,
-                    destType = DestType.BROADCAST,
-                    clientID = ClientID.SERVER,
-                    message = message)
+                                 action=Action.CHAT,
+                                 destType=DestType.BROADCAST,
+                                 clientID=ClientID.SERVER,
+                                 message=message)
                 conn.connectionstate = ConnectionState.SHUTDOWN
                 command = 'quit'
                 conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                conn.send_packet(AdminRcon, command = command)
+                conn.send_packet(AdminRcon, command=command)
 
                 ofsCommand = 'ofs-start.py'
                 successText = 'Server is starting'
                 connectionid = utils.getConnectionID(conn)
                 cmdThread = threading.Thread(
-                    target = self._commandThread,
-                    name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-                    args = [conn, irc, ofsCommand, successText, 15])
+                    target=self._commandThread,
+                    name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+                    args=[conn, irc, ofsCommand, successText, 15])
                 cmdThread.daemon = True
                 cmdThread.start()
             return
@@ -726,11 +719,11 @@ class Suds(callbacks.Plugin):
                     if not rconresult.results.empty():
                         text = rconresult.results.get()
                         if text[3:].startswith('***') and (
-                            command.startswith('move') or
-                            command.startswith('kick')):
+                                command.startswith('move') or
+                                command.startswith('kick')):
                             pass
                         else:
-                            irc.reply(text, prefixNick = False)
+                            irc.reply(text, prefixNick=False)
                     else:
                         break
                 if rconresult.results.empty():
@@ -739,7 +732,7 @@ class Suds(callbacks.Plugin):
                     for i in range(2):
                         if not rconresult.results.empty():
                             text = rconresult.results.get()
-                            irc.reply(text, prefixNick = False)
+                            irc.reply(text, prefixNick=False)
                         else:
                             break
                 else:
@@ -752,7 +745,7 @@ class Suds(callbacks.Plugin):
         else:
             command = conn.rconCommands.get()
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
 
     def _rcvConsole(self, connChan, origin, message):
         conn = self.connections.get(connChan)
@@ -797,7 +790,6 @@ class Suds(callbacks.Plugin):
             frame, name, commandName, tile, param1, param2, text)
         conn.logger.info(logMessage)
 
-
     def _rcvPong(self, connChan, start, end, delta):
         conn = self.connections.get(connChan)
         if not conn:
@@ -806,8 +798,6 @@ class Suds(callbacks.Plugin):
 
         text = 'Dong! reply took %s' % str(delta)
         utils.msgChannel(irc, conn.channel, text)
-
-
 
     # IRC commands
 
@@ -822,7 +812,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate == ConnectionState.CONNECTED:
-            irc.reply('Already connected!!', prefixNick = False)
+            irc.reply('Already connected!!', prefixNick=False)
         else:
             # just in case an existing connection failed to de-register upon disconnect
             try:
@@ -832,6 +822,7 @@ class Suds(callbacks.Plugin):
             except IOError:
                 pass
             self._connectOTTD(irc, conn, source)
+
     apconnect = wrap(apconnect, [optional('text')])
 
     def apdisconnect(self, irc, msg, args, serverID):
@@ -848,7 +839,8 @@ class Suds(callbacks.Plugin):
             conn.connectionstate = ConnectionState.DISCONNECTING
             utils.disconnect(conn, False)
         else:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
+
     apdisconnect = wrap(apdisconnect, [optional('text')])
 
     def date(self, irc, msg, args, serverID):
@@ -862,13 +854,14 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
-        # This is done in a slightly weird way because dates earlier than 1900 are possible in OpenTTD
-        # and strftime (in Python 2 at least) doesn't allow for dates before then
+        # This is done in a slightly weird way because dates earlier than 1900 are possible in OpenTTD
+        # and strftime (in Python 2 at least) doesn't allow for dates before then
         message = '{0.day:02d}/{0.month:02d}/{0.year:4d}'.format(conn.date)
-        irc.reply(message, prefixNick = False)
+        irc.reply(message, prefixNick=False)
+
     date = wrap(date, [optional('text')])
 
     def rcon(self, irc, msg, args, parameters):
@@ -883,17 +876,17 @@ class Suds(callbacks.Plugin):
         if not conn:
             return
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState != RconStatus.IDLE:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
             return
 
         if len(command) >= NETWORK_RCONCOMMAND_LENGTH:
             message = "RCON Command too long (%d/%d)" % (
                 len(command), NETWORK_RCONCOMMAND_LENGTH)
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
             return
 
         logMessage = '<RCON> Nick: %s, command: %s' % (msg.nick, command)
@@ -902,14 +895,15 @@ class Suds(callbacks.Plugin):
         conn.rconNick = msg.nick
         conn.rconState = RconStatus.ACTIVE
         resultdict = utils.RconResults({
-            'irc':irc,
-            'succestext':None,
-            'command':command,
-            'results':Queue.Queue()
+            'irc': irc,
+            'succestext': None,
+            'command': command,
+            'results': Queue.Queue()
         })
         conn.rconResults[conn.rconNick] = resultdict
         conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-        conn.send_packet(AdminRcon, command = command)
+        conn.send_packet(AdminRcon, command=command)
+
     rcon = wrap(rcon, ['text'])
 
     def less(self, irc, msg, args, serverID):
@@ -923,7 +917,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         rconresult = conn.rconResults.get(msg.nick)
@@ -931,7 +925,7 @@ class Suds(callbacks.Plugin):
             for i in range(5):
                 if not rconresult.results.empty():
                     text = rconresult.results.get()
-                    irc.reply(text, prefixNick = False)
+                    irc.reply(text, prefixNick=False)
                 else:
                     break
             if rconresult.results.empty():
@@ -940,7 +934,7 @@ class Suds(callbacks.Plugin):
                 for i in range(2):
                     if not rconresult.results.empty():
                         text = rconresult.results.get()
-                        irc.reply(text, prefixNick = False)
+                        irc.reply(text, prefixNick=False)
                     else:
                         break
             else:
@@ -951,6 +945,7 @@ class Suds(callbacks.Plugin):
         else:
             text = 'There are no more messages to display kemosabi'
             irc.reply(text)
+
     less = wrap(less, [optional('text')])
 
     def shutdown(self, irc, msg, args, serverID):
@@ -964,7 +959,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.rconState == RconStatus.IDLE:
@@ -972,11 +967,12 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.SHUTDOWNSAVED
             command = conn.rconCommands.get()
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
 
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     shutdown = wrap(shutdown, [optional('text')])
 
     def restart(self, irc, msg, args, serverID):
@@ -990,17 +986,18 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.rconState == RconStatus.IDLE:
             conn.rconState = RconStatus.RESTARTSAVED
             command = 'save autosave/autosavesoap'
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     restart = wrap(restart, [optional('text')])
 
     def contentupdate(self, irc, msg, args, serverID):
@@ -1014,7 +1011,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('content update')
@@ -1022,18 +1019,19 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
-                'irc':irc,
-                'succestext':None,
-                'command':command,
-                'results':Queue.Queue()
+                'irc': irc,
+                'succestext': None,
+                'command': command,
+                'results': Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
             irc.reply('Performing content update')
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     contentupdate = wrap(contentupdate, [optional('text')])
 
     def content(self, irc, msg, args, serverID):
@@ -1047,7 +1045,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('content select all')
@@ -1057,17 +1055,18 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
-                'irc':irc,
-                'succestext':None,
-                'command':command,
-                'results':Queue.Queue()
+                'irc': irc,
+                'succestext': None,
+                'command': command,
+                'results': Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     content = wrap(content, [optional('text')])
 
     def rescan(self, irc, msg, args, serverID):
@@ -1081,7 +1080,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             irc.reply('Scanning content directories')
@@ -1092,17 +1091,18 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
-                'irc':irc,
-                'succestext':'Rescan completed',
-                'command':command,
-                'results':Queue.Queue()
+                'irc': irc,
+                'succestext': 'Rescan completed',
+                'command': command,
+                'results': Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     rescan = wrap(rescan, [optional('text')])
 
     def save(self, irc, msg, args, serverID):
@@ -1116,7 +1116,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('save game')
@@ -1124,14 +1124,15 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             resultdict = utils.RconResults({
-                'irc':irc,
-                'succestext':None,
-                'command':command,
-                'results':Queue.Queue()
+                'irc': irc,
+                'succestext': None,
+                'command': command,
+                'results': Queue.Queue()
             })
             conn.rconResults[conn.rconNick] = resultdict
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
+
     save = wrap(save, [optional('text')])
 
     def pause(self, irc, msg, args, serverID):
@@ -1145,17 +1146,18 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             conn.rconCommands.put('pause')
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     pause = wrap(pause, [optional('text')])
 
     def auto(self, irc, msg, args, serverID):
@@ -1170,21 +1172,22 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if conn.rconState == RconStatus.IDLE:
             minPlayers = self.registryValue('minPlayers', conn.channel)
             if minPlayers > 0:
                 conn.rconCommands.put('set min_active_clients %s' %
-                    minPlayers)
+                                      minPlayers)
             conn.rconCommands.put('unpause')
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     auto = wrap(auto, [optional('text')])
 
     def unpause(self, irc, msg, args, serverID):
@@ -1198,7 +1201,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.rconState == RconStatus.IDLE:
@@ -1207,10 +1210,11 @@ class Suds(callbacks.Plugin):
             conn.rconState = RconStatus.ACTIVE
             command = conn.rconCommands.get()
             conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-            conn.send_packet(AdminRcon, command = command)
+            conn.send_packet(AdminRcon, command=command)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     unpause = wrap(unpause, [optional('text')])
 
     def ding(self, irc, msg, args, serverID):
@@ -1224,9 +1228,10 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         conn.ping()
+
     ding = wrap(ding, [optional('text')])
 
     def ip(self, irc, msg, args, serverID):
@@ -1241,6 +1246,7 @@ class Suds(callbacks.Plugin):
 
         text = self.registryValue('publicAddress', conn.channel)
         irc.reply(text)
+
     ip = wrap(ip, [optional('text')])
 
     def info(self, irc, msg, args, serverID):
@@ -1254,7 +1260,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         version = conn.serverinfo.version
         name = conn.serverinfo.name
@@ -1266,17 +1272,18 @@ class Suds(callbacks.Plugin):
             ip = ''
 
         # This is done in a slightly weird way because dates earlier than 1900 are possible in OpenTTD
-        # and strftime (in Python 2 at least) doesn't allow for dates before then
+        # and strftime (in Python 2 at least) doesn't allow for dates before then
         date = '{0.day:02d}/{0.month:02d}/{0.year:4d}'.format(conn.date)
         clients = len(conn.clients)
         if conn.serverinfo.dedicated:
-            clients -= 1 # deduct server-client for dedicated servers
+            clients -= 1  # deduct server-client for dedicated servers
         if clients >= 1:
             clients = ', clients connected: %d' % clients
         else:
             clients = ''
         irc.reply('%s, Version: %s, date: %s%s, map size: %s%s' %
-            (name, version, date, clients, size, ip))
+                  (name, version, date, clients, size, ip))
+
     info = wrap(info, [optional('text')])
 
     def vehicles(self, irc, msg, args, serverID):
@@ -1290,16 +1297,17 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.companies.values():
-            text = 'Total vehicles per type: Rail: %d, Road: %d, Water: %d, Air: %d' %\
-                utils.vehicleCount(conn.companies)
+            text = 'Total vehicles per type: Rail: %d, Road: %d, Water: %d, Air: %d' % \
+                   utils.vehicleCount(conn.companies)
             irc.reply(text)
         else:
-            irc.reply('There are currently no companies in existence. '\
-                'Without companies, there cannot be vehicles')
+            irc.reply('There are currently no companies in existence. ' \
+                      'Without companies, there cannot be vehicles')
+
     vehicles = wrap(vehicles, [optional('text')])
 
     def revision(self, irc, msg, args, serverID):
@@ -1313,10 +1321,11 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         version = conn.serverinfo.version
         irc.reply('Game version is %s. Use Download <os-version> to get a direct download link.' % version)
+
     revision = wrap(revision, [optional('text')])
 
     def password(self, irc, msg, args, serverID):
@@ -1330,12 +1339,13 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         if not conn.clientPassword:
             irc.reply('Free entry, no passwords needed')
         else:
             irc.reply(conn.clientPassword)
+
     password = wrap(password, [optional('text')])
 
     def rules(self, irc, msg, args, serverID):
@@ -1351,13 +1361,14 @@ class Suds(callbacks.Plugin):
         rulesUrl = self.registryValue('rulesUrl', conn.channel)
         if not rulesUrl.lower() == 'none':
             text = 'Server rules can be found here: %s' % rulesUrl
-            irc.reply(text, prefixNick = False)
+            irc.reply(text, prefixNick=False)
             if conn.connectionstate == ConnectionState.CONNECTED:
                 conn.send_packet(AdminChat,
-                    action = Action.CHAT,
-                    destType = DestType.BROADCAST,
-                    clientID = ClientID.SERVER,
-                    message = text)
+                                 action=Action.CHAT,
+                                 destType=DestType.BROADCAST,
+                                 clientID=ClientID.SERVER,
+                                 message=text)
+
     rules = wrap(rules, [optional('text')])
 
     def companies(self, irc, msg, args, serverID):
@@ -1371,7 +1382,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.companies.values():
@@ -1385,14 +1396,15 @@ class Suds(callbacks.Plugin):
                         company.vehicles.ship,
                         company.vehicles.plane)
                     text = 'Company \'%d\' (%s): %s, %s, %s' % (
-                        company.id+1, companyColour, company.name,
+                        company.id + 1, companyColour, company.name,
                         companyFounded, companyVehicles)
                     if company.ai:
                         text = 'AI ' + text
                     irc.reply(text)
         else:
-            irc.reply('There are currently no companies in existence. '\
-                'I smell an opportunity...')
+            irc.reply('There are currently no companies in existence. ' \
+                      'I smell an opportunity...')
+
     companies = wrap(companies, [optional('text')])
 
     def players(self, irc, msg, args, serverID):
@@ -1410,7 +1422,7 @@ class Suds(callbacks.Plugin):
                 return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if isOp:
@@ -1426,8 +1438,8 @@ class Suds(callbacks.Plugin):
                     company = conn.companies.get(client.play_as)
                     companyColour = utils.getColourNameFromNumber(company.colour)
                     players.append('Client %d (%s) is %s, in company %s (%s)' %
-                        (client.id, companyColour, client.name, company.id+1,
-                        company.name))
+                                   (client.id, companyColour, client.name, company.id + 1,
+                                    company.name))
             spectators.sort()
             players.sort()
             for player in players:
@@ -1436,10 +1448,11 @@ class Suds(callbacks.Plugin):
                 spectators = ', '.join(spectators)
                 irc.reply('Spectators: %s' % spectators)
             if not players and not spectators:
-                irc.reply('The server is empty, noone is connected. '\
-                    'Feel free to remedy this situation')
+                irc.reply('The server is empty, noone is connected. ' \
+                          'Feel free to remedy this situation')
         else:
             irc.reply(utils.playercount(conn))
+
     players = wrap(players, [optional('text')])
 
     def playercount(self, irc, msg, args, serverID):
@@ -1453,10 +1466,11 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         irc.reply(utils.playercount(conn))
+
     playercount = wrap(playercount, [optional('text')])
 
     def toggledebug(self, irc, msg, args, serverID):
@@ -1471,7 +1485,7 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
 
         if conn.debugLog:
@@ -1482,6 +1496,7 @@ class Suds(callbacks.Plugin):
             conn.debugLog = True
             irc.reply('Debug logging for %s is now: ON' % conn.ID)
             conn.logger.info('>> Debug logging turned ON <<')
+
     toggledebug = wrap(toggledebug, [optional('text')])
 
     def setdef(self, irc, msg, args, serverID):
@@ -1496,12 +1511,12 @@ class Suds(callbacks.Plugin):
             return
 
         if conn.connectionstate != ConnectionState.CONNECTED:
-            irc.reply('Not connected!!', prefixNick = False)
+            irc.reply('Not connected!!', prefixNick=False)
             return
         rconFile = self.registryValue('defaultSettings', conn.channel)
         if not os.path.isfile(rconFile):
             irc.reply('Cannot read from %s, please set it to a valid bot-readable file. Absolute path is a must'
-                % rconFile)
+                      % rconFile)
             return
         if conn.rconState == RconStatus.IDLE:
             commandlist = []
@@ -1515,13 +1530,14 @@ class Suds(callbacks.Plugin):
                 conn.rconState = RconStatus.ACTIVE
                 command = conn.rconCommands.get()
                 conn.logger.debug('>>--DEBUG--<< Sending rcon: %s' % command)
-                conn.send_packet(AdminRcon, command = command)
+                conn.send_packet(AdminRcon, command=command)
                 irc.reply('Setting default settings: %s' % format('%L', commandlist))
             else:
                 irc.reply('No commands found in %s.' % rconFile)
         else:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
+
     setdef = wrap(setdef, [optional('text')])
 
     def download(self, irc, msg, args, osType, serverID):
@@ -1539,12 +1555,12 @@ class Suds(callbacks.Plugin):
         if not osType:
             actionChar = conf.get(conf.supybot.reply.whenAddressedBy.chars)
             irc.reply('%sdownload lin|lin64|osx|ottdau|source|win32|win64|win9x'
-                % actionChar)
+                      % actionChar)
         if osType == 'ottdau':
             url = 'http://www.openttdcoop.org/winupdater'
         else:
             if conn.connectionstate != ConnectionState.CONNECTED:
-                irc.reply('Not connected!!', prefixNick = False)
+                irc.reply('Not connected!!', prefixNick=False)
                 return
             customUrl = self.registryValue('downloadUrl', conn.channel)
             if not customUrl or customUrl.startswith('None'):
@@ -1556,9 +1572,10 @@ class Suds(callbacks.Plugin):
             irc.reply(url)
         else:
             irc.reply('Couldn\'t decipher download url')
+
     download = wrap(download, [optional(('literal',
-        ['lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
-        optional('text')])
+                                         ['lin', 'lin64', 'osx', 'ottdau', 'win32', 'win64', 'win9x', 'source'])),
+                               optional('text')])
 
     def help(self, irc, msg, args):
         """  Takes no arguments
@@ -1567,9 +1584,8 @@ class Suds(callbacks.Plugin):
         """
 
         irc.reply('http://wiki.openttdcoop.org/Soap')
+
     help = wrap(help)
-
-
 
     # Relay IRC back ingame
 
@@ -1591,16 +1607,14 @@ class Suds(callbacks.Plugin):
         if not 'ACTION' in text:
             message = 'IRC <%s> %s' % (msg.nick, text)
         else:
-            text = text.split(' ',1)[1]
+            text = text.split(' ', 1)[1]
             text = text[:-1]
             message = 'IRC ** %s %s' % (msg.nick, text)
         conn.send_packet(AdminChat,
-            action = Action.CHAT,
-            destType = DestType.BROADCAST,
-            clientID = ClientID.SERVER,
-            message = message)
-
-
+                         action=Action.CHAT,
+                         destType=DestType.BROADCAST,
+                         clientID=ClientID.SERVER,
+                         message=message)
 
     # ofs related commands
 
@@ -1615,18 +1629,19 @@ class Suds(callbacks.Plugin):
             return
 
         if saveUrl[-4:] == '.sav':
-            irc.reply('Starting download...', prefixNick = False)
+            irc.reply('Starting download...', prefixNick=False)
             ofsCommand = 'ofs-getsave.py %s' % saveUrl
             successText = 'Savegame successfully downloaded'
             connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
-                target = self._commandThread,
-                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-                args = [conn, irc, ofsCommand, successText])
+                target=self._commandThread,
+                name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+                args=[conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
         else:
             irc.reply('Sorry, only .sav files are supported')
+
     getsave = wrap(getsave, ['httpUrl', optional('text')])
 
     def start(self, irc, msg, args, serverID):
@@ -1639,18 +1654,19 @@ class Suds(callbacks.Plugin):
             return
         if conn.connectionstate == ConnectionState.CONNECTED:
             irc.reply('I am connected to %s, so it\'s safe to assume that its already running'
-                % conn.serverinfo.name, prefixNick = False)
+                      % conn.serverinfo.name, prefixNick=False)
             return
 
         ofsCommand = 'ofs-start.py'
         successText = 'Server is starting...'
         connectionid = utils.getConnectionID(conn)
         cmdThread = threading.Thread(
-            target = self._commandThread,
-            name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-            args = [conn, irc, ofsCommand, successText])
+            target=self._commandThread,
+            name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+            args=[conn, irc, ofsCommand, successText])
         cmdThread.daemon = True
         cmdThread.start()
+
     start = wrap(start, [optional('text')])
 
     def transfer(self, irc, msg, args, gameNo, savegame, serverID):
@@ -1676,11 +1692,12 @@ class Suds(callbacks.Plugin):
             successText = 'Transfer done. File now at %s' % saveUrl
             connectionid = utils.getConnectionID(conn)
             cmdThread = threading.Thread(
-                target = self._commandThread,
-                name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-                args = [conn, irc, ofsCommand, successText])
+                target=self._commandThread,
+                name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+                args=[conn, irc, ofsCommand, successText])
             cmdThread.daemon = True
             cmdThread.start()
+
     transfer = wrap(transfer, ['int', 'something', optional('text')])
 
     def update(self, irc, msg, args, serverID):
@@ -1695,27 +1712,29 @@ class Suds(callbacks.Plugin):
 
         if conn.rconState != RconStatus.IDLE:
             message = 'Sorry, still processing previous rcon command'
-            irc.reply(message, prefixNick = False)
+            irc.reply(message, prefixNick=False)
             return
 
-        irc.reply('Starting update...', prefixNick = False)
+        irc.reply('Starting update...', prefixNick=False)
         if conn.connectionstate == ConnectionState.CONNECTED:
             message = 'Server is being updated, and will shut down in a bit...'
             conn.send_packet(AdminChat,
-                action = Action.CHAT,
-                destType = DestType.BROADCAST,
-                clientID = ClientID.SERVER,
-                message = message)
+                             action=Action.CHAT,
+                             destType=DestType.BROADCAST,
+                             clientID=ClientID.SERVER,
+                             message=message)
         ofsCommand = 'ofs-svnupdate.py'
         successText = 'Game successfully updated'
         connectionid = utils.getConnectionID(conn)
         cmdThread = threading.Thread(
-            target = self._commandThread,
-            name = 'Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
-            args = [conn, irc, ofsCommand, successText])
+            target=self._commandThread,
+            name='Command.%s.%s' % (connectionid, ofsCommand.split()[0]),
+            args=[conn, irc, ofsCommand, successText])
         cmdThread.daemon = True
         cmdThread.start()
+
     update = wrap(update, [optional('text')])
+
 
 Class = Suds
 
