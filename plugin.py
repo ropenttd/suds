@@ -464,7 +464,7 @@ class Suds(callbacks.Plugin):
             conn.logger.info(logMessage)
             utils.msgChannel(irc, conn.channel, text)
 
-            command = 'kick %s' % client.id
+            command = 'kick %s "This name is blacklisted - please change your name and rejoin"' % client.id
             conn.rcon = conn.channel
             conn.send_packet(AdminRcon, command = command)
             return

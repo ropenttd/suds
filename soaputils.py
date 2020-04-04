@@ -238,13 +238,14 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
     if float(result['result']) < 0:
         msgChannel(irc, conn.channel, "*** There was a problem validating {name}. The error was: {error}".format(name=client.name, error=result['message']))
     elif float(result['result']) == 1:
+        kickMessage = "Sorry, connecting from a VPN or proxy is not allowed! Please disable any such software and try again. If you think this is an error, please contact us."
         conn.send_packet(AdminChat,
                          action=Action.CHAT_CLIENT,
                          destType=DestType.CLIENT,
                          clientID=client.id,
-                         message='Sorry, connecting from a VPN or proxy is not allowed! Please disable any such software and try again. If you think this is an error, please contact us.')
+                         message=kickMessage)
         text = '*** {name} was trying to connect from a VPN or proxy in {location}, which is not allowed.'.format(name=client.name, location=result['Country'])
-        command = 'ban %s' % client.id
+        command = 'ban %s "%s"' % client.id, kickMessage
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
@@ -290,7 +291,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
 
     if kickDict is not None and kickDict[client.id] >= kickCount:
         text = 'Kicking %s for reaching name change warning count' % client.name
-        command = 'kick %s' % client.id
+        command = 'kick %s "Please set a player name in the top right of the server browser before reconnecting."' % client.id
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
             action = Action.CHAT,
