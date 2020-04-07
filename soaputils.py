@@ -245,7 +245,7 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
                          clientID=client.id,
                          message=kickMessage)
         text = '*** {name} was trying to connect from a VPN or proxy in {location}, which is not allowed.'.format(name=client.name, location=result['Country'])
-        command = 'ban %s "%s"' % client.id, kickMessage
+        command = 'ban {clientid} "{message}"'.format(clientid=client.id, message=kickMessage)
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
@@ -279,7 +279,7 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
         kickDict[client.id] = 1
 
     text = '%s: Change your name before joining/starting a company. Use \'!name <new name>\' to do so. (%s OF %s BEFORE KICK)' % (client.name, kickDict[client.id], kickCount)
-    command = 'move %s 255' % client.id
+    command = 'move {clientid} 255'.format(clientid=client.id)
     conn.rcon = conn.channel
     conn.send_packet(AdminRcon, command = command)
     conn.send_packet(AdminChat,
@@ -290,8 +290,8 @@ def moveToSpectators(irc, conn, client, kickCount, kickDict):
     conn.send_packet(AdminRcon, command = command)
 
     if kickDict is not None and kickDict[client.id] >= kickCount:
-        text = 'Kicking %s for reaching name change warning count' % client.name
-        command = 'kick %s "Please set a player name in the top right of the server browser before reconnecting."' % client.id
+        text = 'Kicking {clientname} for reaching name change warning count'.format(clientname=client.name)
+        command = 'kick {clientid} "Please set a player name in the top right of the server browser before reconnecting."'.format(clientid=client.id)
         conn.rcon = conn.channel
         conn.send_packet(AdminChat,
             action = Action.CHAT,
