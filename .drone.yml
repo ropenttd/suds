@@ -1,0 +1,14 @@
+kind: pipeline
+name: default
+
+clone:
+  depth: 1
+steps:
+  - name: docker
+    image: plugins/docker
+    settings:
+      repo: redditopenttd/suds
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
