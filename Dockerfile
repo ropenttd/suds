@@ -16,4 +16,4 @@ WORKDIR /var/supybot/data
 COPY . /plugin
 
 RUN chmod u+x /plugin/docker/start.sh
-ENTRYPOINT ["/plugin/docker/start.sh"]
+ENTRYPOINT ["/bin/bash", "/plugin/docker/start.sh"]
