@@ -13,7 +13,7 @@
 # a copy of the GNU General Public License along with Soap. If not, see
 # <http://www.gnu.org/licenses/>.
 ###
-
+import netaddr as netaddr
 import supybot.conf as conf
 import supybot.ircdb as ircdb
 import supybot.ircmsgs as ircmsgs
@@ -193,8 +193,10 @@ def msgChannel(irc, channel, msg):
 
 def checkIP(irc, conn, client, whitelist, checkedDict):
 
-    if client.hostname in whitelist:
-        text = '*** {name} is a whitelisted player, and will not be checked.'.format(name=client.name)
+    try:
+        ipAddr = netaddr.IPAddress(client.hostname)
+    except netaddr.AddrFormatError:
+        text = '*** There was a problem validating {name}. The error was: Invalid source IP address'.format(name=client.name)
         conn.send_packet(AdminChat,
                          action=Action.CHAT,
                          destType=DestType.BROADCAST,
@@ -202,6 +204,30 @@ def checkIP(irc, conn, client, whitelist, checkedDict):
                          message=text)
         msgChannel(irc, conn.channel, text)
         return
+
+    for v in whitelist:
+        try:
+            entry = netaddr.IPNetwork(v)
+        except netaddr.AddrFormatError:
+            text = '*** *[ADM]* Invalid Whitelist entry while checking {name}'.format(name=client.name)
+            conn.send_packet(AdminChat,
+                             action=Action.CHAT,
+                             destType=DestType.BROADCAST,
+                             clientID=ClientID.SERVER,
+                             message=text)
+            msgChannel(irc, conn.channel, text)
+            return
+
+        if ipAddr in entry:
+            text = '*** {name} is a whitelisted player, and will not be checked.'.format(name=client.name)
+            conn.send_packet(AdminChat,
+                             action=Action.CHAT,
+                             destType=DestType.BROADCAST,
+                             clientID=ClientID.SERVER,
+                             message=text)
+            msgChannel(irc, conn.channel, text)
+            return
+
     result = None
 
     # First let's garbage collect

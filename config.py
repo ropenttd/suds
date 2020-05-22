@@ -93,7 +93,7 @@ conf.registerChannelValue(Suds, 'checkClientVPN',
     registry.Boolean(False, """ True means players will have their IP checked for
      known VPN or other such ban evasion techniques, and kicked if they are using them."""))
 conf.registerGlobalValue(Suds, 'checkClientVPNWhitelist',
-    SemicolonSeparatedListOfStrings('', """If checkClientVPN is enabled, you can disable checking certain IPs here. Semicolon delimited."""))
+    SemicolonSeparatedListOfStrings('', """If checkClientVPN is enabled, you can disable checking certain IPs or subnets (in CIDR notation) here. Semicolon delimited."""))
 conf.registerGlobalValue(Suds, 'nameBlacklist',
     SemicolonSeparatedListOfStrings('', """List of player names to autokick. Semicolon delimited."""))
 conf.registerChannelValue(Suds, 'playAsPlayer',
